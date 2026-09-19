@@ -4,6 +4,7 @@ import { GamificationStats } from '../types';
 import { MoodTheme } from '../data/moodThemes';
 import { Flame, Award, History, CheckCircle2, LogIn, LogOut, Cloud, CloudOff, SunMedium } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface GamificationHeaderProps {
   stats: GamificationStats;
@@ -92,8 +93,11 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: Gamified Stats Chips & Auth */}
+        {/* Right: Gamified Stats Chips, Install & Auth */}
         <div className="flex items-center gap-1.5">
+          {/* PWA Install Button */}
+          <PWAInstallButton />
+
           {/* Streak Chip */}
           <motion.div
             id="streak-indicator-chip"

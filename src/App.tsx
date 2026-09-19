@@ -15,6 +15,7 @@ import { BottomNavigation } from './components/BottomNavigation';
 import { MoodsView } from './components/MoodsView';
 import { FeedsView } from './components/FeedsView';
 import { CroodsView } from './components/CroodsView';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { getMoodTheme } from './data/moodThemes';
 
 export default function App() {
@@ -793,6 +794,9 @@ export default function App() {
           onClose={() => setShowDomainAuthModal(false)}
           onRetrySignIn={handleSignIn}
         />
+
+        {/* PWA Offline Network Banner Indicator */}
+        <OfflineIndicator />
       </div>
     </div>
   );

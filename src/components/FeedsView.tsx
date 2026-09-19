@@ -12,7 +12,6 @@ import {
   ArrowRight,
   LogIn,
   BellRing,
-  Check,
   MessageSquareQuote,
 } from 'lucide-react';
 
@@ -327,14 +326,6 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-end gap-2">
-                  {/* Sent confirmation or current cheer status */}
-                  {activeCheer ? (
-                    <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200/80 flex items-center gap-1 shadow-2xs">
-                      <Check className="w-3.5 h-3.5 stroke-[3] text-rose-600" />
-                      <span>Cheered {activeCheer.emoji}</span>
-                    </span>
-                  ) : null}
-
                   {/* Nudge button if friend hasn't logged today */}
                   {!isToday && (
                     <button
