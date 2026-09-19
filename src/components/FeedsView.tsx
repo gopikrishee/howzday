@@ -14,7 +14,6 @@ import {
   BellRing,
   Check,
   MessageSquareQuote,
-  Sparkles,
 } from 'lucide-react';
 
 interface FeedsViewProps {
@@ -26,7 +25,6 @@ interface FeedsViewProps {
   onSignIn: () => void;
   sentReactions?: StatusReaction[];
   onSendReaction?: (friend: UserProfile, emoji: string, label: string) => Promise<void>;
-  onSimulatePeerReaction?: () => void;
   hasUserLoggedMoodToday?: boolean;
 }
 
@@ -47,7 +45,6 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
   onSignIn,
   sentReactions = [],
   onSendReaction,
-  onSimulatePeerReaction,
   hasUserLoggedMoodToday = false,
 }) => {
   const [nudgedFriends, setNudgedFriends] = useState<Record<string, boolean>>({});
@@ -174,30 +171,6 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
           </p>
         )}
       </div>
-
-      {/* Simulation Helper Card if user wants to test peer reactions */}
-      {onSimulatePeerReaction && (
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-rose-50/90 to-amber-50/90 border border-rose-200/70 shadow-2xs flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Sparkles className="w-4 h-4 text-rose-500 shrink-0" />
-            <div className="min-w-0">
-              <span className="text-xs font-black text-slate-900 block truncate">
-                Interactive Cheer Test
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium block truncate">
-                Simulate receiving a cheer notification & see it in Moods
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onSimulatePeerReaction}
-            className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-black text-xs shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-          >
-            Simulate Cheer
-          </button>
-        </div>
-      )}
 
       {/* Friends Feed Cards */}
       <div className="space-y-3">

@@ -567,37 +567,6 @@ export default function App() {
     }
   };
 
-  // Test Simulation helper: Simulate receiving a cheer from a Crood member
-  const handleSimulatePeerReaction = async () => {
-    const friendCandidate = croodFriends.find((f) => f.userId !== currentUser?.uid);
-    const senderName = friendCandidate?.displayName || 'Mia (Crood)';
-    const senderPhoto = friendCandidate?.photoURL;
-    const cheers = [
-      { emoji: '❤️', label: 'Love' },
-      { emoji: '🤗', label: 'Hug' },
-      { emoji: '💪', label: 'You Got This' },
-      { emoji: '🎉', label: 'Cheer' },
-      { emoji: '✋', label: 'High Five' },
-    ];
-    const picked = cheers[Math.floor(Math.random() * cheers.length)];
-
-    const simReaction: StatusReaction = {
-      id: `sim_react_${Date.now()}`,
-      targetUserId: currentUser?.uid || 'local_user',
-      senderId: friendCandidate?.userId || `sim_${Date.now()}`,
-      senderName,
-      senderPhoto,
-      targetMood: todayEntry?.mood || 'happy',
-      emoji: picked.emoji,
-      label: picked.label,
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    const updated = storageService.saveLocalReaction(simReaction, currentUser?.uid);
-    setStatusReactions(updated);
-  };
-
   // Social actions
   const handleSendFriendRequest = async (targetUser: UserProfile) => {
     if (!currentUser) {
@@ -728,7 +697,6 @@ export default function App() {
               onSignIn={handleSignIn}
               sentReactions={sentReactions}
               onSendReaction={handleSendReaction}
-              onSimulatePeerReaction={handleSimulatePeerReaction}
               hasUserLoggedMoodToday={Boolean(todayEntry)}
             />
           )}
