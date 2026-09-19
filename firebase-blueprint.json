@@ -1,0 +1,335 @@
+{
+  "entities": {
+    "MoodEntry": {
+      "title": "MoodEntry",
+      "description": "A recorded daily mood entry with optional personal reflection notes and tags.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the entry",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the owner user",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "date": {
+          "type": "string",
+          "description": "Calendar date of the check-in (YYYY-MM-DD)",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "maxLength": 10
+        },
+        "mood": {
+          "type": "string",
+          "description": "Mood rating for the day",
+          "enum": ["happy", "neutral", "sad", "angry", "tired", "relax"]
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Unix timestamp in ms"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Personal reflection note explaining the mood",
+          "maxLength": 1000
+        },
+        "isPrivateReason": {
+          "type": "boolean",
+          "description": "Indicates if user chose not to disclose the reason"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Selected tag categories influencing the mood"
+        },
+        "xpEarned": {
+          "type": "number",
+          "description": "Gamification XP earned for this check-in"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["id", "userId", "date", "mood", "xpEarned"]
+    },
+    "UserStats": {
+      "title": "UserStats",
+      "description": "Gamified stats and streak progression for a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the user",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "currentStreak": {
+          "type": "number",
+          "description": "Current consecutive days streak"
+        },
+        "longestStreak": {
+          "type": "number",
+          "description": "Longest consecutive days streak"
+        },
+        "totalCheckIns": {
+          "type": "number",
+          "description": "Total number of daily logs recorded"
+        },
+        "currentXp": {
+          "type": "number",
+          "description": "Total cumulative XP earned"
+        },
+        "level": {
+          "type": "number",
+          "description": "Current gamification level"
+        },
+        "lastCheckInDate": {
+          "type": "string",
+          "description": "Most recent check-in date (YYYY-MM-DD)",
+          "maxLength": 10
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["userId", "currentStreak", "longestStreak", "totalCheckIns", "currentXp", "level"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public searchable user profile for finding friends and displaying crood status.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the user",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the user",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 150
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar photo URL",
+          "maxLength": 1000
+        },
+        "level": {
+          "type": "number",
+          "description": "Current user gamification level"
+        },
+        "currentStreak": {
+          "type": "number",
+          "description": "Consecutive check-in days"
+        },
+        "latestMood": {
+          "type": "string",
+          "description": "Most recent mood rating",
+          "enum": ["happy", "neutral", "sad", "angry", "tired", "relax"]
+        },
+        "latestMoodDate": {
+          "type": "string",
+          "description": "Date of latest mood log (YYYY-MM-DD)",
+          "maxLength": 10
+        },
+        "latestMoodReason": {
+          "type": "string",
+          "description": "Public reason for latest mood if shared",
+          "maxLength": 1000
+        },
+        "latestMoodIsPrivate": {
+          "type": "boolean",
+          "description": "Whether latest mood reason is private"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["userId", "displayName", "email"]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "description": "Friend requests sent between users to join each other's Crood.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the request",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "senderId": {
+          "type": "string",
+          "description": "UID of the requester",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of the sender",
+          "maxLength": 100
+        },
+        "senderEmail": {
+          "type": "string",
+          "description": "Email of the sender",
+          "maxLength": 150
+        },
+        "senderPhoto": {
+          "type": "string",
+          "description": "Photo URL of the sender",
+          "maxLength": 1000
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "UID of the recipient",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "receiverName": {
+          "type": "string",
+          "description": "Display name of recipient",
+          "maxLength": 100
+        },
+        "receiverEmail": {
+          "type": "string",
+          "description": "Email of recipient",
+          "maxLength": 150
+        },
+        "receiverPhoto": {
+          "type": "string",
+          "description": "Photo URL of recipient",
+          "maxLength": 1000
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the friendship request",
+          "enum": ["pending", "accepted", "declined"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the request was initiated"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of status change"
+        }
+      },
+      "required": ["id", "senderId", "receiverId", "status", "senderName", "receiverName"]
+    },
+    "NudgeNotification": {
+      "title": "NudgeNotification",
+      "description": "A daily check-in nudge sent between Crood friends to encourage mood tracking.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the nudge",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "senderId": {
+          "type": "string",
+          "description": "UID of the user sending the nudge",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of sender",
+          "maxLength": 100
+        },
+        "senderPhoto": {
+          "type": "string",
+          "description": "Photo URL of sender",
+          "maxLength": 1000
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "UID of the user receiving the nudge",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "receiverName": {
+          "type": "string",
+          "description": "Display name of receiver",
+          "maxLength": 100
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the nudge (YYYY-MM-DD)",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "maxLength": 10
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Whether the nudge has been read or acknowledged"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the nudge was sent"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the nudge was updated"
+        }
+      },
+      "required": ["id", "senderId", "receiverId", "senderName", "receiverName", "date", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Public searchable user profile for discovery and Crood interactions."
+    },
+    "/users/{userId}/entries/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/MoodEntry"
+      },
+      "description": "Private collection of daily mood entries belonging to a user."
+    },
+    "/users/{userId}/stats/current": {
+      "schema": {
+        "$ref": "#/entities/UserStats"
+      },
+      "description": "Gamification stats and streak counters for a user."
+    },
+    "/friend_requests/{requestId}": {
+      "schema": {
+        "$ref": "#/entities/FriendRequest"
+      },
+      "description": "Friend requests and accepted crood relationships."
+    },
+    "/nudges/{nudgeId}": {
+      "schema": {
+        "$ref": "#/entities/NudgeNotification"
+      },
+      "description": "Real-time friendly nudges sent between Crood members to check in."
+    }
+  }
+}

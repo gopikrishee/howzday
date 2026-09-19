@@ -1,0 +1,93 @@
+export type MoodLevel = 'happy' | 'neutral' | 'sad' | 'angry' | 'tired' | 'relax';
+
+export interface MoodConfig {
+  id: MoodLevel;
+  label: string;
+  tagline: string;
+  primaryColor: string;
+  bgLight: string;
+  borderColor: string;
+  textColor: string;
+  glowColor: string;
+  emoji: string;
+  soundCue?: string;
+  description: string;
+}
+
+export interface MoodEntry {
+  id: string;
+  userId?: string;
+  date: string; // YYYY-MM-DD
+  timestamp: number;
+  mood: MoodLevel;
+  reason?: string;
+  isPrivateReason?: boolean; // true if user selected "Not willing to tell"
+  tags?: string[];
+  xpEarned: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GamificationStats {
+  userId?: string;
+  currentStreak: number;
+  longestStreak: number;
+  totalCheckIns: number;
+  currentXp: number;
+  level: number;
+  lastCheckInDate?: string;
+  todayCompleted: boolean;
+  unlockedBadges: string[];
+  updatedAt?: string;
+}
+
+export type AppTab = 'moods' | 'feeds' | 'croods';
+
+export interface UserProfile {
+  userId: string;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+  level: number;
+  currentStreak: number;
+  latestMood?: MoodLevel | null;
+  latestMoodDate?: string | null;
+  latestMoodReason?: string | null;
+  latestMoodIsPrivate?: boolean;
+  updatedAt?: string;
+}
+
+export interface FriendRequest {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderEmail: string;
+  senderPhoto?: string;
+  receiverId: string;
+  receiverName: string;
+  receiverEmail: string;
+  receiverPhoto?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FriendActivityFeedItem {
+  friend: UserProfile;
+  latestMood: MoodLevel;
+  date: string;
+  updatedAt?: string;
+}
+
+export interface NudgeNotification {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderPhoto?: string;
+  receiverId: string;
+  receiverName: string;
+  date: string; // YYYY-MM-DD
+  read: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
