@@ -589,25 +589,48 @@ export const firestoreService = {
     const now = new Date().toISOString();
 
     try {
-      const reaction: StatusReaction = {
-        id: reactionId,
-        targetUserId: targetUser.userId,
-        senderId: currentUser.uid,
-        senderName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Crood Friend',
-        targetMood: targetUser.latestMood || 'happy',
-        emoji,
-        label,
-        read: false,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const docRef = doc(db, path);
+      const existingSnap = await getDoc(docRef);
 
-      if (currentUser.photoURL) {
-        reaction.senderPhoto = currentUser.photoURL;
+      if (existingSnap.exists()) {
+        const existingData = existingSnap.data() as StatusReaction;
+        const updatePayload: Record<string, unknown> = {
+          emoji,
+          label,
+          targetMood: targetUser.latestMood || 'happy',
+          read: false,
+          updatedAt: now,
+        };
+        await updateDoc(docRef, updatePayload);
+        return {
+          ...existingData,
+          emoji,
+          label,
+          targetMood: targetUser.latestMood || 'happy',
+          read: false,
+          updatedAt: now,
+        };
+      } else {
+        const reaction: StatusReaction = {
+          id: reactionId,
+          targetUserId: targetUser.userId,
+          senderId: currentUser.uid,
+          senderName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Crood Friend',
+          targetMood: targetUser.latestMood || 'happy',
+          emoji,
+          label,
+          read: false,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        if (currentUser.photoURL) {
+          reaction.senderPhoto = currentUser.photoURL;
+        }
+
+        await setDoc(docRef, reaction);
+        return reaction;
       }
-
-      await setDoc(doc(db, path), reaction, { merge: true });
-      return reaction;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -696,7 +719,7 @@ export const firestoreService = {
   },
 
   async markReactionsAsRead(reactions: StatusReaction[]): Promise<void> {
-    const unread = reactions.filter((r) => !r.read);
+    const unread = reactions.filter((r) => !r.read && !r.id.startsWith('sim_') && !r.id.startsWith('guest_'));
     for (const r of unread) {
       try {
         await updateDoc(doc(db, `status_reactions/${r.id}`), {

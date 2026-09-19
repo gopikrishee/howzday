@@ -596,27 +596,6 @@ export default function App() {
 
     const updated = storageService.saveLocalReaction(simReaction, currentUser?.uid);
     setStatusReactions(updated);
-
-    if (currentUser) {
-      try {
-        await firestoreService.sendMoodReaction(
-          {
-            uid: simReaction.senderId,
-            displayName: simReaction.senderName,
-            photoURL: simReaction.senderPhoto || null,
-          } as User,
-          {
-            userId: currentUser.uid,
-            displayName: currentUser.displayName || 'You',
-            latestMood: todayEntry?.mood || 'happy',
-          } as UserProfile,
-          picked.emoji,
-          picked.label
-        );
-      } catch (err) {
-        console.warn('Simulation saved locally:', err);
-      }
-    }
   };
 
   // Social actions
