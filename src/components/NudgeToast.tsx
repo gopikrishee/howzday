@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NudgeNotification } from '../types';
 import { BellRing, Sparkles, X, ArrowRight, Clock } from 'lucide-react';
@@ -17,29 +17,42 @@ export const NudgeToast: React.FC<NudgeToastProps> = ({
   onLogMood,
 }) => {
   const [timeLeft, setTimeLeft] = useState(10);
+  const onDismissRef = useRef(onDismiss);
+  const onLogMoodRef = useRef(onLogMood);
 
   useEffect(() => {
-    if (!nudge || !isVisible) {
+    onDismissRef.current = onDismiss;
+    onLogMoodRef.current = onLogMood;
+  });
+
+  const nudgeId = nudge?.id;
+
+  useEffect(() => {
+    if (!nudgeId || !isVisible) {
       setTimeLeft(10);
       return;
     }
 
     setTimeLeft(10);
-    const interval = setInterval(() => {
+
+    const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
-          onDismiss();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
+    const autoDismissTimeout = setTimeout(() => {
+      onDismissRef.current();
+    }, 10000);
+
     return () => {
-      clearInterval(interval);
+      clearInterval(timer);
+      clearTimeout(autoDismissTimeout);
     };
-  }, [nudge?.id, isVisible, onDismiss]);
+  }, [nudgeId, isVisible]);
 
   const showToast = Boolean(nudge && isVisible);
 

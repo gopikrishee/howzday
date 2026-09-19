@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { MoodLevel, MoodEntry, GamificationStats, StatusReaction } from '../types';
+import { MoodLevel, MoodEntry, GamificationStats } from '../types';
 import { getMoodConfig } from '../data/moodConfigs';
 import { getMoodTheme } from '../data/moodThemes';
 import { MoodCard } from './MoodCard';
 import { MoodLogInput } from './MoodLogInput';
-import { CroodsReactionsCard } from './CroodsReactionsCard';
 import {
   CalendarDays,
   ShieldAlert,
@@ -26,8 +25,6 @@ interface MoodsViewProps {
   onOpenDomainModal?: () => void;
   authError: string | null;
   isUnauthorizedDomain: boolean;
-  statusReactions?: StatusReaction[];
-  onAcknowledgeReactions?: () => void;
 }
 
 const EMPTY_TAGS: string[] = [];
@@ -44,8 +41,6 @@ export const MoodsView: React.FC<MoodsViewProps> = ({
   onOpenDomainModal,
   authError,
   isUnauthorizedDomain,
-  statusReactions = [],
-  onAcknowledgeReactions,
 }) => {
   const [isUnlocked, setIsUnlocked] = useState(false);
 
@@ -165,13 +160,6 @@ export const MoodsView: React.FC<MoodsViewProps> = ({
           </div>
         </div>
       )}
-
-      {/* Crood Reactions to Today's Status */}
-      <CroodsReactionsCard
-        reactions={statusReactions}
-        onAcknowledgeReactions={onAcknowledgeReactions}
-        hasTodayEntry={Boolean(todayEntry)}
-      />
 
       {/* Mood Selector Grid */}
       <section aria-label="Mood selection" className="mb-5">

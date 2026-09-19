@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { MoodLevel, MoodEntry, GamificationStats, AppTab, UserProfile, FriendRequest, NudgeNotification, StatusReaction } from './types';
+import { MoodLevel, MoodEntry, GamificationStats, AppTab, UserProfile, FriendRequest, NudgeNotification } from './types';
 import { storageService, getTodayDateString } from './services/storageService';
 import { firestoreService } from './services/firestoreService';
 import { signInWithGoogle, logOut } from './services/firebase';
@@ -10,7 +10,6 @@ import { MoodHistoryModal } from './components/MoodHistoryModal';
 import { DomainAuthorizationModal } from './components/DomainAuthorizationModal';
 import { NudgeToast } from './components/NudgeToast';
 import { NudgeNotificationModal } from './components/NudgeNotificationModal';
-import { CroodsReactedToast } from './components/CroodsReactedToast';
 import { BottomNavigation } from './components/BottomNavigation';
 import { MoodsView } from './components/MoodsView';
 import { FeedsView } from './components/FeedsView';
@@ -44,12 +43,7 @@ export default function App() {
   const [sentNudges, setSentNudges] = useState<NudgeNotification[]>([]);
   const [activeNudgeToast, setActiveNudgeToast] = useState<NudgeNotification | null>(null);
   const [showNudgesModal, setShowNudgesModal] = useState(false);
-
-  // Status reactions state (ephemeral, reset when mood changes)
-  const [statusReactions, setStatusReactions] = useState<StatusReaction[]>(() =>
-    storageService.getLocalReactions()
-  );
-  const [sentReactions, setSentReactions] = useState<StatusReaction[]>([]);
+  const dismissedNudgeIdsRef = React.useRef<Set<string>>(new Set());
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -182,10 +176,12 @@ export default function App() {
         const todayNudges = nudges.filter((n) => n.date === today);
         setIncomingNudges(todayNudges);
 
-        // Show toast alert for the newest unread nudge today if available
-        const unreadToday = todayNudges.filter((n) => !n.read);
+        // Show toast alert for the newest unread nudge today if available and not dismissed
+        const unreadToday = todayNudges.filter(
+          (n) => !n.read && !dismissedNudgeIdsRef.current.has(n.id)
+        );
         if (unreadToday.length > 0) {
-          setActiveNudgeToast(unreadToday[0]);
+          setActiveNudgeToast((prev) => prev || unreadToday[0]);
         }
       },
       (err) => {
@@ -210,49 +206,21 @@ export default function App() {
     };
   }, [currentUser]);
 
-  // Subscribe to real-time status reactions (who reacted to the current user's mood status)
-  useEffect(() => {
-    if (!currentUser) {
-      const local = storageService.getLocalReactions();
-      setStatusReactions(local);
-      return;
-    }
-
-    const unsubTarget = firestoreService.subscribeTargetReactions(
-      currentUser.uid,
-      (reactions) => {
-        setStatusReactions(reactions);
-      },
-      (err) => {
-        console.error('Error listening to status reactions:', err);
-      }
-    );
-
-    const unsubSent = firestoreService.subscribeSentReactions(
-      currentUser.uid,
-      (reactions) => {
-        setSentReactions(reactions);
-      },
-      (err) => {
-        console.error('Error listening to sent reactions:', err);
-      }
-    );
-
-    return () => {
-      unsubTarget();
-      unsubSent();
-    };
-  }, [currentUser]);
-
   // When active in moods section, show incoming unread nudge notification
   useEffect(() => {
-    if (activeTab === 'moods' && !activeNudgeToast) {
-      const unreadToday = incomingNudges.filter((n) => !n.read);
+    if (activeTab === 'moods') {
+      const unreadToday = incomingNudges.filter(
+        (n) => !n.read && !dismissedNudgeIdsRef.current.has(n.id)
+      );
       if (unreadToday.length > 0) {
-        setActiveNudgeToast(unreadToday[0]);
+        setActiveNudgeToast((prev) => prev || unreadToday[0]);
+      } else {
+        setActiveNudgeToast(null);
       }
+    } else {
+      setActiveNudgeToast(null);
     }
-  }, [activeTab, incomingNudges, activeNudgeToast]);
+  }, [activeTab, incomingNudges]);
 
   // Check today's entry on mount and automatically refresh on new day / midnight rollover
   useEffect(() => {
@@ -325,11 +293,6 @@ export default function App() {
   const unreadNudgesCount = useMemo(() => {
     return incomingNudges.filter((n) => !n.read).length;
   }, [incomingNudges]);
-
-  // Unread status reactions count
-  const unreadReactions = useMemo(() => {
-    return statusReactions.filter((r) => !r.read);
-  }, [statusReactions]);
 
   // Formatted date string
   const todayFormatted = new Date().toLocaleDateString(undefined, {
@@ -431,18 +394,6 @@ export default function App() {
         }
       }
 
-      // Reset reactions on mood change so only new reactions for current mood appear
-      const isMoodChange = !todayEntry || todayEntry.mood !== moodToSave;
-      if (isMoodChange) {
-        storageService.clearLocalReactions(currentUser?.uid);
-        setStatusReactions([]);
-        if (currentUser) {
-          firestoreService.clearStatusReactionsForUser(currentUser.uid).catch((err) => {
-            console.warn('Failed to clear reactions on mood change:', err);
-          });
-        }
-      }
-
       setTodayEntry(result.entry);
       setStats(result.stats);
       setEntries(storageService.getEntries(currentUser?.uid));
@@ -487,18 +438,6 @@ export default function App() {
           setIsCloudSynced(true);
         } catch (fireErr) {
           console.error('Failed to sync entry to Firestore:', fireErr);
-        }
-      }
-
-      // Reset reactions on mood change so only new reactions for current mood appear
-      const isMoodChange = !todayEntry || todayEntry.mood !== moodToSave;
-      if (isMoodChange) {
-        storageService.clearLocalReactions(currentUser?.uid);
-        setStatusReactions([]);
-        if (currentUser) {
-          firestoreService.clearStatusReactionsForUser(currentUser.uid).catch((err) => {
-            console.warn('Failed to clear reactions on mood change:', err);
-          });
         }
       }
 
@@ -555,71 +494,23 @@ export default function App() {
   };
 
   const handleMarkAllNudgesRead = async () => {
-    await firestoreService.markAllTodayNudgesAsRead(incomingNudges);
+    incomingNudges.forEach((n) => dismissedNudgeIdsRef.current.add(n.id));
     setIncomingNudges((prev) => prev.map((n) => ({ ...n, read: true })));
     setActiveNudgeToast(null);
+    await firestoreService.markAllTodayNudgesAsRead(incomingNudges).catch((err) => {
+      console.warn('Failed to mark all nudges read in Firestore:', err);
+    });
   };
 
-  const handleMarkSingleNudgeRead = async (nudgeId: string) => {
-    await firestoreService.markNudgeAsRead(nudgeId);
+  const handleMarkSingleNudgeRead = (nudgeId: string) => {
+    dismissedNudgeIdsRef.current.add(nudgeId);
     setIncomingNudges((prev) =>
       prev.map((n) => (n.id === nudgeId ? { ...n, read: true } : n))
     );
-    if (activeNudgeToast?.id === nudgeId) {
-      setActiveNudgeToast(null);
-    }
-  };
-
-  // Acknowledge incoming reactions when viewed in Moods section
-  const handleAcknowledgeReactions = async () => {
-    storageService.markLocalReactionsAsRead(currentUser?.uid);
-    setStatusReactions((prev) => prev.map((r) => ({ ...r, read: true })));
-
-    if (currentUser && statusReactions.some((r) => !r.read)) {
-      try {
-        await firestoreService.markReactionsAsRead(statusReactions);
-      } catch (err) {
-        console.error('Error marking reactions read in Firestore:', err);
-      }
-    }
-  };
-
-  // Send a reaction to a Crood friend
-  const handleSendReaction = async (
-    targetFriend: UserProfile,
-    emoji: string,
-    label: string
-  ) => {
-    if (currentUser) {
-      try {
-        const reaction = await firestoreService.sendMoodReaction(
-          currentUser,
-          targetFriend,
-          emoji,
-          label
-        );
-        setSentReactions((prev) => {
-          const filtered = prev.filter((r) => r.targetUserId !== targetFriend.userId);
-          return [reaction, ...filtered];
-        });
-      } catch (err) {
-        console.error('Error sending reaction:', err);
-      }
-    } else {
-      // Local/offline reaction
-      const localReaction: StatusReaction = {
-        id: `react_${targetFriend.userId}_${Date.now()}`,
-        targetUserId: targetFriend.userId,
-        senderId: 'guest_user',
-        senderName: 'You',
-        targetMood: targetFriend.latestMood || 'happy',
-        emoji,
-        label,
-        read: false,
-        createdAt: new Date().toISOString(),
-      };
-      setSentReactions((prev) => [localReaction, ...prev.filter((r) => r.targetUserId !== targetFriend.userId)]);
-    }
+    setActiveNudgeToast((curr) => (curr?.id === nudgeId ? null : curr));
+    firestoreService.markNudgeAsRead(nudgeId).catch((err) => {
+      console.warn('Failed to mark nudge read in Firestore:', err);
+    });
   };
 
   const activeMood = selectedMood || todayEntry?.mood || null;
@@ -661,13 +552,6 @@ export default function App() {
         }}
       />
 
-      {/* Real-time In-App Notification Toast for Crood Reactions (Shown for 10 seconds in moods section only) */}
-      <CroodsReactedToast
-        unreadReactions={unreadReactions}
-        isVisible={activeTab === 'moods'}
-        onDismiss={handleAcknowledgeReactions}
-      />
-
       {/* Mobile Frame Container with gentle ambient tint and smooth transition */}
       <div
         className={`w-full max-w-md mx-auto min-h-screen ${currentMoodTheme.containerBg} shadow-2xl flex flex-col relative border-x ${currentMoodTheme.borderColor} transition-colors duration-700 ease-in-out z-10`}
@@ -703,8 +587,6 @@ export default function App() {
               onOpenDomainModal={() => setShowDomainAuthModal(true)}
               authError={authError}
               isUnauthorizedDomain={isUnauthorizedDomain}
-              statusReactions={statusReactions}
-              onAcknowledgeReactions={handleAcknowledgeReactions}
             />
           )}
 
@@ -716,8 +598,6 @@ export default function App() {
               onNudgeFriend={handleSendNudge}
               onGoToCroods={() => setActiveTab('croods')}
               onSignIn={handleSignIn}
-              sentReactions={sentReactions}
-              onSendReaction={handleSendReaction}
               hasUserLoggedMoodToday={Boolean(todayEntry)}
             />
           )}
