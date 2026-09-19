@@ -243,21 +243,17 @@ export default function App() {
     };
   }, [currentUser]);
 
-  // When active in moods section, show incoming unread nudge notification
+  // Show incoming unread nudge notification across the app (irrespective of section)
   useEffect(() => {
-    if (activeTab === 'moods') {
-      const unreadToday = incomingNudges.filter(
-        (n) => !n.read && !dismissedNudgeIdsRef.current.has(n.id)
-      );
-      if (unreadToday.length > 0) {
-        setActiveNudgeToast((prev) => prev || unreadToday[0]);
-      } else {
-        setActiveNudgeToast(null);
-      }
+    const unreadToday = incomingNudges.filter(
+      (n) => !n.read && !dismissedNudgeIdsRef.current.has(n.id)
+    );
+    if (unreadToday.length > 0) {
+      setActiveNudgeToast((prev) => prev || unreadToday[0]);
     } else {
       setActiveNudgeToast(null);
     }
-  }, [activeTab, incomingNudges]);
+  }, [incomingNudges]);
 
   // Check today's entry on mount and automatically refresh on new day / midnight rollover
   useEffect(() => {
@@ -646,10 +642,10 @@ export default function App() {
         style={{ backgroundColor: currentMoodTheme.auraColor2 }}
       />
 
-      {/* Real-time In-App Notification Toast for incoming Nudges (Shown for 10 seconds in moods section only) */}
+      {/* Real-time In-App Notification Toast for incoming Nudges (Shown across the app irrespective of section) */}
       <NudgeToast
         nudge={activeNudgeToast}
-        isVisible={activeTab === 'moods'}
+        isVisible={Boolean(activeNudgeToast)}
         onDismiss={() => {
           if (activeNudgeToast) {
             handleMarkSingleNudgeRead(activeNudgeToast.id);
@@ -667,11 +663,11 @@ export default function App() {
         }}
       />
 
-      {/* Toast Notification when Crood members cheer / react to your status */}
+      {/* Toast Notification when Crood members cheer / react to your status (Shown across the app irrespective of section) */}
       <CroodsReactedToast
         unreadReactions={unreadReactions}
         onViewInMoods={() => setActiveTab('moods')}
-        isVisible={unreadReactions.length > 0 && activeTab !== 'moods'}
+        isVisible={unreadReactions.length > 0}
       />
 
       {/* Mobile Frame Container with gentle ambient tint and smooth transition */}
