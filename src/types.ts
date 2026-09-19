@@ -91,3 +91,18 @@ export interface NudgeNotification {
   createdAt: string;
   updatedAt?: string;
 }
+
+export interface StatusReaction {
+  id: string; // react_${targetUserId}_${senderId}
+  targetUserId: string;
+  senderId: string;
+  senderName: string;
+  senderPhoto?: string;
+  targetMood: MoodLevel;
+  emoji: string;
+  label: string;
+  read: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+

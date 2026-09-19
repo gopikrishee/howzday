@@ -298,6 +298,71 @@
         }
       },
       "required": ["id", "senderId", "receiverId", "senderName", "receiverName", "date", "read", "createdAt"]
+    },
+    "StatusReaction": {
+      "title": "StatusReaction",
+      "description": "Transient peer reaction or cheer to a friend's active daily mood status.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the reaction doc (e.g. react_targetId_senderId)",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "targetUserId": {
+          "type": "string",
+          "description": "UID of the user whose status received the cheer",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "senderId": {
+          "type": "string",
+          "description": "UID of the user who cheered",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of the cheering user",
+          "maxLength": 100
+        },
+        "senderPhoto": {
+          "type": "string",
+          "description": "Photo URL of the cheering user",
+          "maxLength": 1000
+        },
+        "targetMood": {
+          "type": "string",
+          "description": "Mood level of the target status at reaction time",
+          "enum": ["happy", "neutral", "sad", "angry", "tired", "relax"]
+        },
+        "emoji": {
+          "type": "string",
+          "description": "The reaction emoji",
+          "maxLength": 10
+        },
+        "label": {
+          "type": "string",
+          "description": "Text label of the reaction",
+          "maxLength": 50
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Whether the target user has viewed the reaction in moods section"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "targetUserId", "senderId", "senderName", "targetMood", "emoji", "label", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -330,6 +395,12 @@
         "$ref": "#/entities/NudgeNotification"
       },
       "description": "Real-time friendly nudges sent between Crood members to check in."
+    },
+    "/status_reactions/{reactionId}": {
+      "schema": {
+        "$ref": "#/entities/StatusReaction"
+      },
+      "description": "Transient peer status reactions, reset when the target user changes mood."
     }
   }
 }

@@ -1,8 +1,9 @@
-import { MoodEntry, GamificationStats, MoodLevel } from '../types';
+import { MoodEntry, GamificationStats, MoodLevel, StatusReaction } from '../types';
 
 const STORAGE_KEYS = {
   ENTRIES: 'daily_mood_entries_v1',
   STATS: 'daily_mood_stats_v1',
+  REACTIONS: 'daily_mood_reactions_v1',
 };
 
 export const getTodayDateString = (d: Date = new Date()): string => {
@@ -176,6 +177,58 @@ export const storageService = {
     return userId ? `daily_mood_stats_${userId}` : STORAGE_KEYS.STATS;
   },
 
+  getUserReactionsKey(userId?: string): string {
+    return userId ? `daily_mood_reactions_${userId}` : STORAGE_KEYS.REACTIONS;
+  },
+
+  getLocalReactions(userId?: string): StatusReaction[] {
+    try {
+      const key = this.getUserReactionsKey(userId);
+      const stored = localStorage.getItem(key);
+      if (!stored) return [];
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  },
+
+  saveLocalReaction(reaction: StatusReaction, userId?: string): StatusReaction[] {
+    try {
+      const key = this.getUserReactionsKey(userId);
+      const list = this.getLocalReactions(userId);
+      const idx = list.findIndex((r) => r.senderId === reaction.senderId);
+      if (idx >= 0) {
+        list[idx] = reaction;
+      } else {
+        list.push(reaction);
+      }
+      localStorage.setItem(key, JSON.stringify(list));
+      return list;
+    } catch {
+      return [];
+    }
+  },
+
+  markLocalReactionsAsRead(userId?: string): void {
+    try {
+      const key = this.getUserReactionsKey(userId);
+      const list = this.getLocalReactions(userId);
+      const updated = list.map((r) => ({ ...r, read: true }));
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to mark local reactions as read:', e);
+    }
+  },
+
+  clearLocalReactions(userId?: string): void {
+    try {
+      const key = this.getUserReactionsKey(userId);
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('Failed to clear local reactions:', e);
+    }
+  },
+
   getEntries(userId?: string): MoodEntry[] {
     try {
       const key = this.getUserEntriesKey(userId);
@@ -345,8 +398,14 @@ export const storageService = {
     };
 
     if (existingIndex >= 0) {
+      // If mood has changed, clear previous reactions
+      if (entries[existingIndex].mood !== params.mood) {
+        this.clearLocalReactions(params.userId);
+      }
       entries[existingIndex] = newEntry;
     } else {
+      // First check-in or brand new mood, start with clean reactions
+      this.clearLocalReactions(params.userId);
       entries.unshift(newEntry);
     }
 
@@ -391,6 +450,7 @@ export const storageService = {
   },
 
   resetTodayEntry(userId?: string): GamificationStats {
+    this.clearLocalReactions(userId);
     const today = getTodayDateString();
     let entries = this.getEntries(userId);
     entries = entries.filter((e) => e.date !== today);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
-import { UserProfile, MoodLevel } from '../types';
+import { UserProfile, MoodLevel, NudgeNotification, StatusReaction } from '../types';
 import { getMoodConfig } from '../data/moodConfigs';
 import { getTodayDateString } from '../services/storageService';
 import {
@@ -14,42 +14,70 @@ import {
   BellRing,
   Check,
   MessageSquareQuote,
+  Sparkles,
 } from 'lucide-react';
 
 interface FeedsViewProps {
   user: User | null;
   friends: UserProfile[];
+  sentNudges?: NudgeNotification[];
+  onNudgeFriend?: (targetFriend: UserProfile) => Promise<void>;
   onGoToCroods: () => void;
   onSignIn: () => void;
+  sentReactions?: StatusReaction[];
+  onSendReaction?: (friend: UserProfile, emoji: string, label: string) => Promise<void>;
+  onSimulatePeerReaction?: () => void;
+  hasUserLoggedMoodToday?: boolean;
 }
+
+const CHEER_OPTIONS = [
+  { emoji: '✋', label: 'High Five' },
+  { emoji: '❤️', label: 'Love' },
+  { emoji: '🤗', label: 'Hug' },
+  { emoji: '💪', label: 'You Got This' },
+  { emoji: '🎉', label: 'Cheer' },
+];
 
 export const FeedsView: React.FC<FeedsViewProps> = ({
   user,
   friends,
+  sentNudges = [],
+  onNudgeFriend,
   onGoToCroods,
   onSignIn,
+  sentReactions = [],
+  onSendReaction,
+  onSimulatePeerReaction,
+  hasUserLoggedMoodToday = false,
 }) => {
   const [nudgedFriends, setNudgedFriends] = useState<Record<string, boolean>>({});
-  const [reactionsSent, setReactionsSent] = useState<Record<string, string>>({});
+  const [localCheered, setLocalCheered] = useState<Record<string, { emoji: string; label: string }>>({});
+  const [floatingAnimation, setFloatingAnimation] = useState<{ id: string; emoji: string } | null>(null);
 
   const todayStr = getTodayDateString();
 
-  const handleNudge = (friendId: string) => {
-    setNudgedFriends((prev) => ({ ...prev, [friendId]: true }));
+  const handleNudge = async (friend: UserProfile) => {
+    setNudgedFriends((prev) => ({ ...prev, [friend.userId]: true }));
+    if (onNudgeFriend) {
+      await onNudgeFriend(friend);
+    }
     setTimeout(() => {
-      setNudgedFriends((prev) => ({ ...prev, [friendId]: false }));
+      setNudgedFriends((prev) => ({ ...prev, [friend.userId]: false }));
     }, 4000);
   };
 
-  const handleReaction = (friendId: string, reactionEmoji: string) => {
-    setReactionsSent((prev) => ({ ...prev, [friendId]: reactionEmoji }));
+  const handleTriggerReaction = async (friend: UserProfile, emoji: string, label: string) => {
+    // Show floating particle animation
+    setFloatingAnimation({ id: friend.userId, emoji });
+    setLocalCheered((prev) => ({ ...prev, [friend.userId]: { emoji, label } }));
+
+    if (onSendReaction) {
+      await onSendReaction(friend, emoji, label);
+    }
+
     setTimeout(() => {
-      setReactionsSent((prev) => {
-        const next = { ...prev };
-        delete next[friendId];
-        return next;
-      });
-    }, 3000);
+      setFloatingAnimation((curr) => (curr?.id === friend.userId ? null : curr));
+    }, 1500);
   };
 
   // If user is not signed in
@@ -88,7 +116,7 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
           Your Feed is Quiet
         </h3>
         <p className="text-xs font-medium text-slate-600 max-w-xs mb-5 leading-relaxed">
-          You haven&apos;t added any friends to your Crood yet. Search for friends by name or email in the Croods tab to see their daily mood status alone.
+          You haven&apos;t added any friends to your Crood yet. Search for friends by name or email in the Croods tab to see their daily mood status and cheer them on.
         </p>
         <button
           type="button"
@@ -118,84 +146,84 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Crood Mood Climate
-            </h3>
+            <h4 className="text-xs font-black uppercase tracking-wider text-indigo-900">
+              Crood Pulse
+            </h4>
           </div>
-          <span className="text-xs font-extrabold text-indigo-900 bg-indigo-100 px-2.5 py-0.5 rounded-full border border-indigo-300">
-            {friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}
+          <span className="text-[11px] font-bold text-slate-500">
+            {loggedFriends.length} of {friends.length} checked in today
           </span>
         </div>
 
-        <p className="text-xs font-medium text-slate-700 mb-3 leading-relaxed">
-          {loggedFriends.length === 0 ? (
-            <span>No one in your Crood has checked in yet today. Be the first to cheer them on!</span>
-          ) : (
-            <span>
-              {moodCounts.map((m) => (
-                <span key={m.level} className="mr-1.5">
-                  <strong className="font-bold" style={{ color: m.config.primaryColor }}>
-                    {m.count} {m.config.label} {m.config.emoji}
-                  </strong>
-                </span>
-              ))}
-              in your circle today.
-            </span>
-          )}
-        </p>
+        {moodCounts.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {moodCounts.map(({ level, config, count }) => (
+              <span
+                key={level}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs ${config.bgLight} ${config.textColor} ${config.borderColor}`}
+              >
+                <span>{config.emoji}</span>
+                <span>{config.label}</span>
+                <span className="opacity-80 font-black">({count})</span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500 mt-2 font-medium">
+            Waiting for your Crood members to check in today. Nudge them to log their mood!
+          </p>
+        )}
+      </div>
 
-        {/* Climate Visual Indicator */}
-        <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden flex border border-slate-200">
-          {loggedFriends.length > 0 ? (
-            <>
-              {moodCounts.map((m) => (
-                <div
-                  key={m.level}
-                  style={{
-                    width: `${(m.count / loggedFriends.length) * 100}%`,
-                    backgroundColor: m.config.primaryColor,
-                  }}
-                  className="h-full transition-all"
-                  title={`${m.count} ${m.config.label}`}
-                />
-              ))}
-            </>
-          ) : (
-            <div className="w-full bg-slate-200 h-full" />
-          )}
+      {/* Simulation Helper Card if user wants to test peer reactions */}
+      {onSimulatePeerReaction && (
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-rose-50/90 to-amber-50/90 border border-rose-200/70 shadow-2xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="w-4 h-4 text-rose-500 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-xs font-black text-slate-900 block truncate">
+                Interactive Cheer Test
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium block truncate">
+                Simulate receiving a cheer notification & see it in Moods
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onSimulatePeerReaction}
+            className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-black text-xs shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+          >
+            Simulate Cheer
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Friends Feed Header */}
-      <div className="flex items-center justify-between px-1">
-        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-          <Activity className="w-4 h-4 text-indigo-600" />
-          <span>Friends&apos; Mood Status</span>
-        </h4>
-        <span className="text-[11px] font-semibold text-slate-500">Shared reflections &amp; moods</span>
-      </div>
-
-      {/* Friends Cards Feed */}
+      {/* Friends Feed Cards */}
       <div className="space-y-3">
         {friends.map((friend) => {
           const moodConfig = friend.latestMood ? getMoodConfig(friend.latestMood) : null;
           const isToday = friend.latestMoodDate === todayStr;
-          const isNudged = nudgedFriends[friend.userId];
-          const activeReaction = reactionsSent[friend.userId];
+          const isNudged = nudgedFriends[friend.userId] || sentNudges.some((n) => n.receiverId === friend.userId);
+
+          // Find if current user sent a reaction to this friend
+          const remoteReaction = sentReactions.find((r) => r.targetUserId === friend.userId);
+          const activeCheer = localCheered[friend.userId] || (remoteReaction ? { emoji: remoteReaction.emoji, label: remoteReaction.label } : null);
 
           return (
             <motion.div
               key={friend.userId}
-              id={`friend-feed-card-${friend.userId}`}
-              initial={{ opacity: 0, y: 8 }}
+              layout
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 rounded-3xl bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-sm transition-all flex flex-col space-y-3"
+              transition={{ duration: 0.2 }}
+              className="p-4 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col space-y-3 relative overflow-hidden"
             >
-              {/* Top Row: Avatar, Name, Level & Streak */}
+              {/* Top Row: Friend Profile Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black flex items-center justify-center text-base shadow-xs overflow-hidden border-2 border-white">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-2xs flex items-center justify-center font-black text-slate-700 text-sm overflow-hidden">
                       {friend.photoURL ? (
                         <img
                           src={friend.photoURL}
@@ -285,66 +313,73 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
               </div>
 
               {/* Bottom Row: Social Cheers & Reactions */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">
+              <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-100 text-xs">
+                {/* Floating Emoji Particle on click */}
+                <AnimatePresence>
+                  {floatingAnimation?.id === friend.userId && (
+                    <motion.div
+                      initial={{ opacity: 1, y: 0, scale: 1 }}
+                      animate={{ opacity: 0, y: -45, scale: 1.5 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className="absolute left-20 -top-4 pointer-events-none text-2xl z-20"
+                    >
+                      {floatingAnimation.emoji}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-center flex-wrap gap-1.5">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider mr-1">
                     Cheer:
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleReaction(friend.userId, '✋ High Five')}
-                    className="p-1 px-2.5 rounded-xl bg-slate-100 hover:bg-amber-100 hover:scale-105 active:scale-95 text-slate-800 font-bold text-xs transition-all cursor-pointer border border-slate-200/80"
-                    title="Send High Five"
-                  >
-                    ✋
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReaction(friend.userId, '❤️ Love')}
-                    className="p-1 px-2.5 rounded-xl bg-slate-100 hover:bg-rose-100 hover:scale-105 active:scale-95 text-slate-800 font-bold text-xs transition-all cursor-pointer border border-slate-200/80"
-                    title="Send Love"
-                  >
-                    ❤️
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReaction(friend.userId, '🤗 Hug')}
-                    className="p-1 px-2.5 rounded-xl bg-slate-100 hover:bg-indigo-100 hover:scale-105 active:scale-95 text-slate-800 font-bold text-xs transition-all cursor-pointer border border-slate-200/80"
-                    title="Send Hug"
-                  >
-                    🤗
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReaction(friend.userId, '💪 You Got This')}
-                    className="p-1 px-2.5 rounded-xl bg-slate-100 hover:bg-emerald-100 hover:scale-105 active:scale-95 text-slate-800 font-bold text-xs transition-all cursor-pointer border border-slate-200/80"
-                    title="You got this"
-                  >
-                    💪
-                  </button>
+                  {CHEER_OPTIONS.map((opt) => {
+                    const isSelected = activeCheer?.emoji === opt.emoji;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => handleTriggerReaction(friend, opt.emoji, opt.label)}
+                        className={`p-1 px-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer border active:scale-95 shadow-2xs ${
+                          isSelected
+                            ? 'bg-rose-100 border-rose-300 text-rose-950 scale-105 shadow-xs'
+                            : 'bg-slate-100 hover:bg-amber-50 hover:scale-105 text-slate-800 border-slate-200/80'
+                        }`}
+                        title={opt.label}
+                      >
+                        <span className="text-sm mr-1 leading-none">{opt.emoji}</span>
+                        <span className="hidden sm:inline text-[10px]">{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Feedback or Nudge button */}
-                {activeReaction ? (
-                  <span className="text-xs font-black text-emerald-700 flex items-center gap-1 animate-bounce">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Sent!</span>
-                  </span>
-                ) : !isToday ? (
-                  <button
-                    type="button"
-                    onClick={() => handleNudge(friend.userId)}
-                    disabled={isNudged}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
-                      isNudged
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200'
-                    }`}
-                  >
-                    <BellRing className="w-3.5 h-3.5" />
-                    <span>{isNudged ? 'Nudged! 🔔' : 'Nudge'}</span>
-                  </button>
-                ) : null}
+                <div className="flex items-center justify-end gap-2">
+                  {/* Sent confirmation or current cheer status */}
+                  {activeCheer ? (
+                    <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200/80 flex items-center gap-1 shadow-2xs">
+                      <Check className="w-3.5 h-3.5 stroke-[3] text-rose-600" />
+                      <span>Cheered {activeCheer.emoji}</span>
+                    </span>
+                  ) : null}
+
+                  {/* Nudge button if friend hasn't logged today */}
+                  {!isToday && (
+                    <button
+                      type="button"
+                      onClick={() => handleNudge(friend)}
+                      disabled={isNudged}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                        isNudged
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200'
+                      }`}
+                    >
+                      <BellRing className="w-3.5 h-3.5" />
+                      <span>{isNudged ? 'Nudged! 🔔' : 'Nudge'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           );

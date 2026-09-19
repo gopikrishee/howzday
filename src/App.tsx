@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { MoodLevel, MoodEntry, GamificationStats, AppTab, UserProfile, FriendRequest, NudgeNotification } from './types';
+import { MoodLevel, MoodEntry, GamificationStats, AppTab, UserProfile, FriendRequest, NudgeNotification, StatusReaction } from './types';
 import { storageService, getTodayDateString } from './services/storageService';
 import { firestoreService } from './services/firestoreService';
 import { signInWithGoogle, logOut } from './services/firebase';
@@ -10,6 +10,7 @@ import { MoodHistoryModal } from './components/MoodHistoryModal';
 import { DomainAuthorizationModal } from './components/DomainAuthorizationModal';
 import { NudgeToast } from './components/NudgeToast';
 import { NudgeNotificationModal } from './components/NudgeNotificationModal';
+import { CroodsReactedToast } from './components/CroodsReactedToast';
 import { BottomNavigation } from './components/BottomNavigation';
 import { MoodsView } from './components/MoodsView';
 import { FeedsView } from './components/FeedsView';
@@ -43,6 +44,12 @@ export default function App() {
   const [sentNudges, setSentNudges] = useState<NudgeNotification[]>([]);
   const [activeNudgeToast, setActiveNudgeToast] = useState<NudgeNotification | null>(null);
   const [showNudgesModal, setShowNudgesModal] = useState(false);
+
+  // Status reactions state (ephemeral, reset when mood changes)
+  const [statusReactions, setStatusReactions] = useState<StatusReaction[]>(() =>
+    storageService.getLocalReactions()
+  );
+  const [sentReactions, setSentReactions] = useState<StatusReaction[]>([]);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -203,6 +210,40 @@ export default function App() {
     };
   }, [currentUser]);
 
+  // Subscribe to real-time status reactions (who cheered the current user's mood status)
+  useEffect(() => {
+    if (!currentUser) {
+      const local = storageService.getLocalReactions();
+      setStatusReactions(local);
+      return;
+    }
+
+    const unsubTarget = firestoreService.subscribeTargetReactions(
+      currentUser.uid,
+      (reactions) => {
+        setStatusReactions(reactions);
+      },
+      (err) => {
+        console.error('Error listening to status reactions:', err);
+      }
+    );
+
+    const unsubSent = firestoreService.subscribeSentReactions(
+      currentUser.uid,
+      (reactions) => {
+        setSentReactions(reactions);
+      },
+      (err) => {
+        console.error('Error listening to sent reactions:', err);
+      }
+    );
+
+    return () => {
+      unsubTarget();
+      unsubSent();
+    };
+  }, [currentUser]);
+
   // Check today's entry on mount and automatically refresh on new day / midnight rollover
   useEffect(() => {
     const checkToday = () => {
@@ -274,6 +315,11 @@ export default function App() {
   const unreadNudgesCount = useMemo(() => {
     return incomingNudges.filter((n) => !n.read).length;
   }, [incomingNudges]);
+
+  // Unread status reactions count for badge & in-app notification
+  const unreadReactions = useMemo(() => {
+    return statusReactions.filter((r) => !r.read);
+  }, [statusReactions]);
 
   // Formatted date string
   const todayFormatted = new Date().toLocaleDateString(undefined, {
@@ -375,6 +421,18 @@ export default function App() {
         }
       }
 
+      // User Intent: "Once the mood changed by the user, all the reactions will be reset and start to record the new reaction only."
+      const isMoodChange = !todayEntry || todayEntry.mood !== moodToSave;
+      if (isMoodChange) {
+        storageService.clearLocalReactions(currentUser?.uid);
+        setStatusReactions([]);
+        if (currentUser) {
+          firestoreService.clearStatusReactionsForUser(currentUser.uid).catch((err) => {
+            console.warn('Failed to clear reactions on mood change:', err);
+          });
+        }
+      }
+
       setTodayEntry(result.entry);
       setStats(result.stats);
       setEntries(storageService.getEntries(currentUser?.uid));
@@ -422,6 +480,18 @@ export default function App() {
         }
       }
 
+      // User Intent: "Once the mood changed by the user, all the reactions will be reset and start to record the new reaction only."
+      const isMoodChange = !todayEntry || todayEntry.mood !== moodToSave;
+      if (isMoodChange) {
+        storageService.clearLocalReactions(currentUser?.uid);
+        setStatusReactions([]);
+        if (currentUser) {
+          firestoreService.clearStatusReactionsForUser(currentUser.uid).catch((err) => {
+            console.warn('Failed to clear reactions on mood change:', err);
+          });
+        }
+      }
+
       setTodayEntry(result.entry);
       setStats(result.stats);
       setEntries(storageService.getEntries(currentUser?.uid));
@@ -442,6 +512,110 @@ export default function App() {
       setSelectedMood(todayEntry.mood);
     } else {
       setSelectedMood(null);
+    }
+  };
+
+  // Acknowledge incoming reactions when viewed in Moods section
+  const handleAcknowledgeReactions = async () => {
+    storageService.markLocalReactionsAsRead(currentUser?.uid);
+    setStatusReactions((prev) => prev.map((r) => ({ ...r, read: true })));
+
+    if (currentUser && statusReactions.some((r) => !r.read)) {
+      try {
+        await firestoreService.markReactionsAsRead(statusReactions);
+      } catch (err) {
+        console.error('Error marking reactions read in Firestore:', err);
+      }
+    }
+  };
+
+  // Send a mood cheer reaction to a Crood friend
+  const handleSendReaction = async (
+    targetFriend: UserProfile,
+    emoji: string,
+    label: string
+  ) => {
+    if (currentUser) {
+      try {
+        const reaction = await firestoreService.sendMoodReaction(
+          currentUser,
+          targetFriend,
+          emoji,
+          label
+        );
+        setSentReactions((prev) => {
+          const filtered = prev.filter((r) => r.targetUserId !== targetFriend.userId);
+          return [reaction, ...filtered];
+        });
+      } catch (err) {
+        console.error('Error sending cheer reaction:', err);
+      }
+    } else {
+      // Local/offline cheer
+      const localReaction: StatusReaction = {
+        id: `react_${targetFriend.userId}_${Date.now()}`,
+        targetUserId: targetFriend.userId,
+        senderId: 'guest_user',
+        senderName: 'You',
+        targetMood: targetFriend.latestMood || 'happy',
+        emoji,
+        label,
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+      setSentReactions((prev) => [localReaction, ...prev.filter((r) => r.targetUserId !== targetFriend.userId)]);
+    }
+  };
+
+  // Test Simulation helper: Simulate receiving a cheer from a Crood member
+  const handleSimulatePeerReaction = async () => {
+    const friendCandidate = croodFriends.find((f) => f.userId !== currentUser?.uid);
+    const senderName = friendCandidate?.displayName || 'Mia (Crood)';
+    const senderPhoto = friendCandidate?.photoURL;
+    const cheers = [
+      { emoji: '❤️', label: 'Love' },
+      { emoji: '🤗', label: 'Hug' },
+      { emoji: '💪', label: 'You Got This' },
+      { emoji: '🎉', label: 'Cheer' },
+      { emoji: '✋', label: 'High Five' },
+    ];
+    const picked = cheers[Math.floor(Math.random() * cheers.length)];
+
+    const simReaction: StatusReaction = {
+      id: `sim_react_${Date.now()}`,
+      targetUserId: currentUser?.uid || 'local_user',
+      senderId: friendCandidate?.userId || `sim_${Date.now()}`,
+      senderName,
+      senderPhoto,
+      targetMood: todayEntry?.mood || 'happy',
+      emoji: picked.emoji,
+      label: picked.label,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = storageService.saveLocalReaction(simReaction, currentUser?.uid);
+    setStatusReactions(updated);
+
+    if (currentUser) {
+      try {
+        await firestoreService.sendMoodReaction(
+          {
+            uid: simReaction.senderId,
+            displayName: simReaction.senderName,
+            photoURL: simReaction.senderPhoto || null,
+          } as User,
+          {
+            userId: currentUser.uid,
+            displayName: currentUser.displayName || 'You',
+            latestMood: todayEntry?.mood || 'happy',
+          } as UserProfile,
+          picked.emoji,
+          picked.label
+        );
+      } catch (err) {
+        console.warn('Simulation saved locally:', err);
+      }
     }
   };
 
@@ -518,6 +692,13 @@ export default function App() {
         }}
       />
 
+      {/* Real-time In-App Notification Toast for Crood Reactions */}
+      <CroodsReactedToast
+        unreadReactions={unreadReactions}
+        onViewInMoods={() => setActiveTab('moods')}
+        isVisible={unreadReactions.length > 0 && activeTab !== 'moods'}
+      />
+
       {/* Mobile Frame Container with gentle ambient tint and smooth transition */}
       <div
         className={`w-full max-w-md mx-auto min-h-screen ${currentMoodTheme.containerBg} shadow-2xl flex flex-col relative border-x ${currentMoodTheme.borderColor} transition-colors duration-700 ease-in-out z-10`}
@@ -553,6 +734,8 @@ export default function App() {
               onOpenDomainModal={() => setShowDomainAuthModal(true)}
               authError={authError}
               isUnauthorizedDomain={isUnauthorizedDomain}
+              statusReactions={statusReactions}
+              onAcknowledgeReactions={handleAcknowledgeReactions}
             />
           )}
 
@@ -564,6 +747,10 @@ export default function App() {
               onNudgeFriend={handleSendNudge}
               onGoToCroods={() => setActiveTab('croods')}
               onSignIn={handleSignIn}
+              sentReactions={sentReactions}
+              onSendReaction={handleSendReaction}
+              onSimulatePeerReaction={handleSimulatePeerReaction}
+              hasUserLoggedMoodToday={Boolean(todayEntry)}
             />
           )}
 
@@ -587,6 +774,7 @@ export default function App() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           pendingRequestsCount={incomingPendingCount}
+          unreadReactionsCount={unreadReactions.length}
           moodTheme={currentMoodTheme}
         />
 

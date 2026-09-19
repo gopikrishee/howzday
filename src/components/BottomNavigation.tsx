@@ -7,6 +7,7 @@ interface BottomNavigationProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
   pendingRequestsCount?: number;
+  unreadReactionsCount?: number;
   moodTheme?: MoodTheme;
 }
 
@@ -14,6 +15,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   activeTab,
   onTabChange,
   pendingRequestsCount = 0,
+  unreadReactionsCount = 0,
   moodTheme,
 }) => {
   const tabs = [
@@ -21,7 +23,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       id: 'moods' as AppTab,
       label: 'Moods',
       icon: Smile,
-      badge: 0,
+      badge: unreadReactionsCount,
     },
     {
       id: 'feeds' as AppTab,

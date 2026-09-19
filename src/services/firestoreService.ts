@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
-import { MoodEntry, GamificationStats, MoodLevel, UserProfile, FriendRequest, NudgeNotification } from '../types';
+import { MoodEntry, GamificationStats, MoodLevel, UserProfile, FriendRequest, NudgeNotification, StatusReaction } from '../types';
 import { getTodayDateString } from './storageService';
 
 export const firestoreService = {
@@ -575,6 +575,149 @@ export const firestoreService = {
       } catch (e) {
         console.warn('Error marking nudge as read:', e);
       }
+    }
+  },
+
+  async sendMoodReaction(
+    currentUser: User,
+    targetUser: UserProfile,
+    emoji: string,
+    label: string
+  ): Promise<StatusReaction> {
+    const reactionId = `react_${targetUser.userId}_${currentUser.uid}`;
+    const path = `status_reactions/${reactionId}`;
+    const now = new Date().toISOString();
+
+    try {
+      const reaction: StatusReaction = {
+        id: reactionId,
+        targetUserId: targetUser.userId,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Crood Friend',
+        targetMood: targetUser.latestMood || 'happy',
+        emoji,
+        label,
+        read: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      if (currentUser.photoURL) {
+        reaction.senderPhoto = currentUser.photoURL;
+      }
+
+      await setDoc(doc(db, path), reaction, { merge: true });
+      return reaction;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  subscribeTargetReactions(
+    targetUserId: string,
+    onNext: (reactions: StatusReaction[]) => void,
+    onError?: (err: unknown) => void
+  ) {
+    const path = 'status_reactions';
+    const q = query(
+      collection(db, path),
+      where('targetUserId', '==', targetUserId)
+    );
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: StatusReaction[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data();
+          list.push({
+            id: data.id || d.id,
+            targetUserId: data.targetUserId,
+            senderId: data.senderId,
+            senderName: data.senderName || 'Crood Friend',
+            senderPhoto: data.senderPhoto,
+            targetMood: data.targetMood || 'happy',
+            emoji: data.emoji || '❤️',
+            label: data.label || 'Cheer',
+            read: Boolean(data.read),
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt,
+          });
+        });
+        // Sort newest first
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        onNext(list);
+      },
+      (err) => {
+        if (onError) onError(err);
+        handleFirestoreError(err, OperationType.LIST, path);
+      }
+    );
+  },
+
+  subscribeSentReactions(
+    senderId: string,
+    onNext: (reactions: StatusReaction[]) => void,
+    onError?: (err: unknown) => void
+  ) {
+    const path = 'status_reactions';
+    const q = query(
+      collection(db, path),
+      where('senderId', '==', senderId)
+    );
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: StatusReaction[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data();
+          list.push({
+            id: data.id || d.id,
+            targetUserId: data.targetUserId,
+            senderId: data.senderId,
+            senderName: data.senderName || 'You',
+            senderPhoto: data.senderPhoto,
+            targetMood: data.targetMood || 'happy',
+            emoji: data.emoji || '❤️',
+            label: data.label || 'Cheer',
+            read: Boolean(data.read),
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+          });
+        });
+        onNext(list);
+      },
+      (err) => {
+        if (onError) onError(err);
+        handleFirestoreError(err, OperationType.LIST, path);
+      }
+    );
+  },
+
+  async markReactionsAsRead(reactions: StatusReaction[]): Promise<void> {
+    const unread = reactions.filter((r) => !r.read);
+    for (const r of unread) {
+      try {
+        await updateDoc(doc(db, `status_reactions/${r.id}`), {
+          read: true,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.warn('Error marking reaction as read:', e);
+      }
+    }
+  },
+
+  async clearStatusReactionsForUser(targetUserId: string): Promise<void> {
+    const path = 'status_reactions';
+    try {
+      const q = query(collection(db, path), where('targetUserId', '==', targetUserId));
+      const snap = await getDocs(q);
+      const deletePromises = snap.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(deletePromises);
+    } catch (e) {
+      console.warn('Error clearing status reactions for user:', e);
     }
   },
 };

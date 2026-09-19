@@ -67,6 +67,20 @@ service cloud.firestore {
         && data.createdAt is string && data.createdAt.size() <= 50;
     }
 
+    // Validation for StatusReaction
+    function isValidStatusReaction(data) {
+      return isValidId(data.id)
+        && data.senderId is string && data.senderId == request.auth.uid
+        && data.targetUserId is string && data.targetUserId.size() > 0 && data.targetUserId.size() <= 128
+        && data.senderName is string && data.senderName.size() > 0 && data.senderName.size() <= 100
+        && (!('senderPhoto' in data) || (data.senderPhoto is string && data.senderPhoto.size() <= 1000))
+        && data.targetMood is string && (data.targetMood == 'happy' || data.targetMood == 'neutral' || data.targetMood == 'sad' || data.targetMood == 'angry' || data.targetMood == 'tired' || data.targetMood == 'relax')
+        && data.emoji is string && data.emoji.size() <= 10
+        && data.label is string && data.label.size() <= 50
+        && data.read is bool
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
     // Validation for MoodEntry
     function isValidMoodEntry(data, userId) {
       return data.id is string && isValidId(data.id)
@@ -182,6 +196,27 @@ service cloud.firestore {
 
       allow delete: if isSignedIn()
         && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+    }
+
+    // Real-time peer reactions to current mood status
+    match /status_reactions/{reactionId} {
+      allow get, list: if isSignedIn()
+        && (resource == null || resource.data.targetUserId == request.auth.uid || resource.data.senderId == request.auth.uid);
+
+      allow create: if isSignedIn()
+        && isValidId(reactionId)
+        && isValidStatusReaction(incoming())
+        && incoming().senderId == request.auth.uid
+        && incoming().id == reactionId;
+
+      allow update: if isSignedIn()
+        && (resource.data.targetUserId == request.auth.uid || resource.data.senderId == request.auth.uid)
+        && incoming().senderId == existing().senderId
+        && incoming().targetUserId == existing().targetUserId
+        && incoming().diff(existing()).affectedKeys().hasOnly(['emoji', 'label', 'read', 'updatedAt']);
+
+      allow delete: if isSignedIn()
+        && (resource.data.targetUserId == request.auth.uid || resource.data.senderId == request.auth.uid);
     }
   }
 }
