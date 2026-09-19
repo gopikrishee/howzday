@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
-import { UserProfile, MoodLevel, NudgeNotification } from '../types';
+import { UserProfile, MoodLevel, NudgeNotification, StatusReaction } from '../types';
 import { getMoodConfig } from '../data/moodConfigs';
 import { getTodayDateString } from '../services/storageService';
 import {
@@ -12,6 +12,7 @@ import {
   ArrowRight,
   LogIn,
   BellRing,
+  Check,
   MessageSquareQuote,
 } from 'lucide-react';
 
@@ -22,8 +23,17 @@ interface FeedsViewProps {
   onNudgeFriend?: (targetFriend: UserProfile) => Promise<void>;
   onGoToCroods: () => void;
   onSignIn: () => void;
+  sentReactions?: StatusReaction[];
+  onSendReaction?: (friend: UserProfile, emoji: string, label: string) => Promise<void>;
   hasUserLoggedMoodToday?: boolean;
 }
+
+const CHEER_OPTIONS = [
+  { emoji: '✋', label: 'High Five' },
+  { emoji: '❤️', label: 'Love' },
+  { emoji: '🤗', label: 'Hug' },
+  { emoji: '💪', label: 'You Got This' },
+];
 
 export const FeedsView: React.FC<FeedsViewProps> = ({
   user,
@@ -32,9 +42,15 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
   onNudgeFriend,
   onGoToCroods,
   onSignIn,
+  sentReactions = [],
+  onSendReaction,
   hasUserLoggedMoodToday = false,
 }) => {
   const [nudgedFriends, setNudgedFriends] = useState<Record<string, boolean>>({});
+  const [floatingAnimation, setFloatingAnimation] = useState<{
+    id: string;
+    emoji: string;
+  } | null>(null);
 
   const todayStr = getTodayDateString();
 
@@ -46,6 +62,21 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
     setTimeout(() => {
       setNudgedFriends((prev) => ({ ...prev, [friend.userId]: false }));
     }, 4000);
+  };
+
+  const handleTriggerReaction = async (
+    targetFriend: UserProfile,
+    emoji: string,
+    label: string
+  ) => {
+    setFloatingAnimation({ id: targetFriend.userId, emoji });
+    setTimeout(() => {
+      setFloatingAnimation((prev) => (prev?.id === targetFriend.userId ? null : prev));
+    }, 1000);
+
+    if (onSendReaction) {
+      await onSendReaction(targetFriend, emoji, label);
+    }
   };
 
   // If user is not signed in
@@ -149,6 +180,7 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
           const moodConfig = friend.latestMood ? getMoodConfig(friend.latestMood) : null;
           const isToday = friend.latestMoodDate === todayStr;
           const isNudged = nudgedFriends[friend.userId] || sentNudges.some((n) => n.receiverId === friend.userId);
+          const activeCheer = sentReactions.find((r) => r.targetUserId === friend.userId);
 
           return (
             <motion.div
@@ -252,24 +284,75 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
                 </div>
               </div>
 
-              {/* Bottom Row: Nudge Action if friend has not checked in today */}
-              {!isToday && (
-                <div className="flex items-center justify-end pt-2 border-t border-slate-100 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleNudge(friend)}
-                    disabled={isNudged}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
-                      isNudged
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200'
-                    }`}
-                  >
-                    <BellRing className="w-3.5 h-3.5" />
-                    <span>{isNudged ? 'Nudged! 🔔' : 'Nudge'}</span>
-                  </button>
+              {/* Bottom Row: Social Cheers & Reactions */}
+              <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-100 text-xs">
+                {/* Floating Emoji Particle on click */}
+                <AnimatePresence>
+                  {floatingAnimation?.id === friend.userId && (
+                    <motion.div
+                      initial={{ opacity: 1, y: 0, scale: 1 }}
+                      animate={{ opacity: 0, y: -45, scale: 1.5 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className="absolute left-20 -top-4 pointer-events-none text-2xl z-20"
+                    >
+                      {floatingAnimation.emoji}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-center flex-wrap gap-1.5">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider mr-1">
+                    Cheer:
+                  </span>
+                  {CHEER_OPTIONS.map((opt) => {
+                    const isSelected = activeCheer?.emoji === opt.emoji;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => handleTriggerReaction(friend, opt.emoji, opt.label)}
+                        className={`p-1 px-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer border active:scale-95 shadow-2xs ${
+                          isSelected
+                            ? 'bg-rose-100 border-rose-300 text-rose-950 scale-105 shadow-xs'
+                            : 'bg-slate-100 hover:bg-amber-50 hover:scale-105 text-slate-800 border-slate-200/80'
+                        }`}
+                        title={opt.label}
+                      >
+                        <span className="text-sm mr-1 leading-none">{opt.emoji}</span>
+                        <span className="hidden sm:inline text-[10px]">{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+
+                <div className="flex items-center justify-end gap-2">
+                  {/* Sent confirmation or current cheer status */}
+                  {activeCheer ? (
+                    <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200/80 flex items-center gap-1 shadow-2xs">
+                      <Check className="w-3.5 h-3.5 stroke-[3] text-rose-600" />
+                      <span>Cheered {activeCheer.emoji}</span>
+                    </span>
+                  ) : null}
+
+                  {/* Nudge button if friend hasn't logged today */}
+                  {!isToday && (
+                    <button
+                      type="button"
+                      onClick={() => handleNudge(friend)}
+                      disabled={isNudged}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                        isNudged
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200'
+                      }`}
+                    >
+                      <BellRing className="w-3.5 h-3.5" />
+                      <span>{isNudged ? 'Nudged! 🔔' : 'Nudge'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </motion.div>
           );
         })}
