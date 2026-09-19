@@ -666,7 +666,11 @@ export default function App() {
       {/* Toast Notification when Crood members cheer / react to your status (Shown across the app irrespective of section) */}
       <CroodsReactedToast
         unreadReactions={unreadReactions}
-        onViewInMoods={() => setActiveTab('moods')}
+        onViewInMoods={() => {
+          setActiveTab('moods');
+          handleAcknowledgeReactions();
+        }}
+        onDismiss={handleAcknowledgeReactions}
         isVisible={unreadReactions.length > 0}
       />
 

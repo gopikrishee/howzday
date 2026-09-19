@@ -35,16 +35,7 @@ export const CroodsReactionsCard: React.FC<CroodsReactionsCardProps> = ({
     onAcknowledgeRef.current = onAcknowledgeReactions;
   });
 
-  // Acknowledge all unread reactions safely with a debounce when viewed
-  useEffect(() => {
-    const hasUnread = reactions.some((r) => !r.read);
-    if (hasUnread && onAcknowledgeRef.current) {
-      const timer = setTimeout(() => {
-        onAcknowledgeRef.current?.();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [reactions]);
+  // We keep unread reactions until dismissed or acknowledged by the user
 
   if (!hasTodayEntry) return null;
 
