@@ -1,0 +1,6 @@
+{
+  "name": "HowZDay",
+  "description": "HowZDay - A mindful daily mood check-in and emotional wellness app with Crood circles and friend status feeds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
