@@ -123,6 +123,22 @@ service cloud.firestore {
         && (!('lastCheckInDate' in data) || (data.lastCheckInDate is string && data.lastCheckInDate.size() <= 10));
     }
 
+    // Validation for DailyPlanner
+    function isValidDailyPlanner(data) {
+      return isValidId(data.id)
+        && data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() <= 128
+        && data.ownerName is string && data.ownerName.size() > 0 && data.ownerName.size() <= 100
+        && (!('ownerPhoto' in data) || data.ownerPhoto == null || (data.ownerPhoto is string && data.ownerPhoto.size() <= 1000))
+        && data.date is string && data.date.size() == 10 && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.collaboratorIds is list && data.collaboratorIds.size() <= 30
+        && (!('attachedCroodIds' in data) || (data.attachedCroodIds is list && data.attachedCroodIds.size() <= 30))
+        && (!('collaborators' in data) || (data.collaborators is list && data.collaborators.size() <= 30))
+        && (!('tasks' in data) || (data.tasks is list && data.tasks.size() <= 100))
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
     // Public searchable User Profiles for finding friends & showing Feeds
     match /users/{userId} {
       allow get, list: if isSignedIn();
@@ -256,6 +272,28 @@ service cloud.firestore {
 
       allow delete: if isSignedIn()
         && (resource.data.receiverId == request.auth.uid || resource.data.senderId == request.auth.uid);
+    }
+
+    // Collaborative daily task planners shared exclusively with attached croods
+    match /daily_planners/{plannerId} {
+      allow get, list: if isSignedIn()
+        && (resource == null || request.auth.uid in resource.data.collaboratorIds);
+
+      allow create: if isSignedIn()
+        && isValidId(plannerId)
+        && isValidDailyPlanner(incoming())
+        && incoming().ownerId == request.auth.uid
+        && request.auth.uid in incoming().collaboratorIds
+        && incoming().id == plannerId;
+
+      allow update: if isSignedIn()
+        && request.auth.uid in existing().collaboratorIds
+        && isValidDailyPlanner(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().id == existing().id;
+
+      allow delete: if isSignedIn()
+        && (existing().ownerId == request.auth.uid);
     }
   }
 }

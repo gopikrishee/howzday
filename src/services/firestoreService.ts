@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType, isQuotaExceededError, notifyQuotaExceeded } from './firebase';
-import { MoodEntry, GamificationStats, MoodLevel, UserProfile, FriendRequest, NudgeNotification, StatusReaction, CroodCheckInNotification } from '../types';
+import { MoodEntry, GamificationStats, MoodLevel, UserProfile, FriendRequest, NudgeNotification, StatusReaction, CroodCheckInNotification, DailyPlanner, DailyTaskItem, CollaboratorSummary } from '../types';
 import { getTodayDateString, storageService } from './storageService';
 
 export const firestoreService = {
@@ -1030,6 +1030,107 @@ export const firestoreService = {
       });
     } catch (err) {
       console.warn('Failed to mark check-in notification as read:', err);
+    }
+  },
+
+  /**
+   * Subscribe to daily collaborative planners where current user is in collaboratorIds
+   */
+  subscribeDailyPlanners(
+    userId: string,
+    onNext: (planners: DailyPlanner[]) => void,
+    onError?: (error: unknown) => void
+  ): () => void {
+    const plannersCollection = collection(db, 'daily_planners');
+    const q = query(plannersCollection, where('collaboratorIds', 'array-contains', userId));
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: DailyPlanner[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data();
+          list.push({
+            id: data.id || d.id,
+            ownerId: data.ownerId,
+            ownerName: data.ownerName || 'Friend',
+            ownerPhoto: data.ownerPhoto,
+            date: data.date,
+            title: data.title || 'Daily Task Planner',
+            attachedCroodIds: Array.isArray(data.attachedCroodIds) ? data.attachedCroodIds : [],
+            collaboratorIds: Array.isArray(data.collaboratorIds) ? data.collaboratorIds : [data.ownerId],
+            collaborators: Array.isArray(data.collaborators) ? data.collaborators : [],
+            tasks: Array.isArray(data.tasks) ? data.tasks : [],
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt,
+          });
+        });
+        // Sort descending by createdAt or date
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        onNext(list);
+      },
+      (error) => {
+        if (isQuotaExceededError(error)) {
+          notifyQuotaExceeded();
+        } else {
+          console.warn('Error in subscribeDailyPlanners:', error);
+          if (onError) onError(error);
+        }
+      }
+    );
+  },
+
+  /**
+   * Create a new Daily Task Planner
+   */
+  async createDailyPlanner(planner: DailyPlanner): Promise<void> {
+    const path = `daily_planners/${planner.id}`;
+    try {
+      await setDoc(doc(db, 'daily_planners', planner.id), {
+        ...planner,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        notifyQuotaExceeded();
+        return;
+      }
+      handleFirestoreError(error, OperationType.CREATE, path);
+    }
+  },
+
+  /**
+   * Update an existing Daily Task Planner
+   */
+  async updateDailyPlanner(plannerId: string, updates: Partial<DailyPlanner>): Promise<void> {
+    const path = `daily_planners/${plannerId}`;
+    try {
+      await updateDoc(doc(db, 'daily_planners', plannerId), {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        notifyQuotaExceeded();
+        return;
+      }
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  },
+
+  /**
+   * Delete a Daily Task Planner (owner only)
+   */
+  async deleteDailyPlanner(plannerId: string): Promise<void> {
+    const path = `daily_planners/${plannerId}`;
+    try {
+      await deleteDoc(doc(db, 'daily_planners', plannerId));
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        notifyQuotaExceeded();
+        return;
+      }
+      handleFirestoreError(error, OperationType.DELETE, path);
     }
   },
 };

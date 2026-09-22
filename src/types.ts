@@ -165,4 +165,57 @@ export interface MonthlyInsight {
   isAiGenerated: boolean;
 }
 
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskCategory = 'Work' | 'Health' | 'Crood Sync' | 'Personal' | 'Mindfulness';
+
+export interface TaskModifier {
+  uid: string;
+  displayName: string;
+  photoURL?: string;
+}
+
+export interface TaskCheer {
+  uid: string;
+  emoji: string;
+  name: string;
+}
+
+export interface DailyTaskItem {
+  id: string;
+  title: string;
+  completed: boolean;
+  priority: TaskPriority;
+  category: TaskCategory;
+  assignedTo?: TaskModifier;
+  createdBy: TaskModifier;
+  lastModifiedBy: TaskModifier;
+  lastModifiedAt: string; // ISO date string
+  createdAt: string; // ISO date string
+  cheers?: TaskCheer[];
+}
+
+export interface CollaboratorSummary {
+  uid: string;
+  displayName: string;
+  email?: string;
+  photoURL?: string;
+  currentStreak?: number;
+  latestMood?: MoodLevel | null;
+}
+
+export interface DailyPlanner {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerPhoto?: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  attachedCroodIds: string[]; // UIDs of attached croods
+  collaboratorIds: string[]; // [ownerId, ...attachedCroodIds]
+  collaborators: CollaboratorSummary[];
+  tasks: DailyTaskItem[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
 

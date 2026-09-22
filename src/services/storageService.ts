@@ -1,4 +1,4 @@
-import { MoodEntry, GamificationStats, MoodLevel, StatusReaction, MoodTimeSlot } from '../types';
+import { MoodEntry, GamificationStats, MoodLevel, StatusReaction, MoodTimeSlot, DailyPlanner, DailyTaskItem } from '../types';
 
 const STORAGE_KEYS = {
   ENTRIES: 'daily_mood_entries_v1',
@@ -513,6 +513,22 @@ export const storageService = {
     stats.todayCompleted = false;
     localStorage.setItem(this.getUserStatsKey(userId), JSON.stringify(stats));
     return stats;
+  },
+
+  getDailyPlanners(userId?: string): DailyPlanner[] {
+    const key = `daily_planners_${userId || 'guest'}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  },
+
+  saveDailyPlanners(userId: string | undefined, planners: DailyPlanner[]): void {
+    const key = `daily_planners_${userId || 'guest'}`;
+    localStorage.setItem(key, JSON.stringify(planners));
   },
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { MoodLevel, MoodEntry, GamificationStats, AppTab, UserProfile, FriendRequest, NudgeNotification, StatusReaction, CroodCheckInNotification } from './types';
+import { MoodLevel, MoodEntry, GamificationStats, AppTab, UserProfile, FriendRequest, NudgeNotification, StatusReaction, CroodCheckInNotification, DailyPlanner } from './types';
 import { storageService, getTodayDateString } from './services/storageService';
 import { firestoreService } from './services/firestoreService';
 import { notificationService } from './services/notificationService';
@@ -59,7 +59,31 @@ export default function App() {
   const [statusReactions, setStatusReactions] = useState<StatusReaction[]>([]);
   const [sentReactions, setSentReactions] = useState<StatusReaction[]>([]);
   const [activeCheckInToast, setActiveCheckInToast] = useState<CroodCheckInNotification | null>(null);
+  const [dailyPlanners, setDailyPlanners] = useState<DailyPlanner[]>(() => storageService.getDailyPlanners());
   const dismissedNudgeIdsRef = React.useRef<Set<string>>(new Set());
+
+  // Subscribe to real-time Daily Collaborative Planners
+  useEffect(() => {
+    if (!currentUser) {
+      setDailyPlanners(storageService.getDailyPlanners());
+      return;
+    }
+
+    const unsubPlanners = firestoreService.subscribeDailyPlanners(
+      currentUser.uid,
+      (cloudPlanners) => {
+        setDailyPlanners(cloudPlanners);
+        storageService.saveDailyPlanners(currentUser.uid, cloudPlanners);
+      },
+      (err) => {
+        if (!isQuotaExceededError(err)) {
+          console.error('Error listening to daily planners:', err);
+        }
+      }
+    );
+
+    return () => unsubPlanners();
+  }, [currentUser?.uid]);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -731,6 +755,39 @@ export default function App() {
     }
   };
 
+  const handleSaveDailyPlanner = async (planner: DailyPlanner) => {
+    setDailyPlanners((prev) => {
+      const idx = prev.findIndex((p) => p.id === planner.id);
+      const updated = idx >= 0 ? prev.map((p) => (p.id === planner.id ? planner : p)) : [planner, ...prev];
+      storageService.saveDailyPlanners(currentUser?.uid, updated);
+      return updated;
+    });
+
+    if (currentUser) {
+      try {
+        await firestoreService.createDailyPlanner(planner);
+      } catch (err) {
+        console.warn('Failed to sync daily planner to Firestore:', err);
+      }
+    }
+  };
+
+  const handleDeleteDailyPlanner = async (plannerId: string) => {
+    setDailyPlanners((prev) => {
+      const updated = prev.filter((p) => p.id !== plannerId);
+      storageService.saveDailyPlanners(currentUser?.uid, updated);
+      return updated;
+    });
+
+    if (currentUser) {
+      try {
+        await firestoreService.deleteDailyPlanner(plannerId);
+      } catch (err) {
+        console.warn('Failed to delete daily planner from Firestore:', err);
+      }
+    }
+  };
+
   const activeMood = selectedMood || todayEntry?.mood || null;
   const currentMoodTheme = getMoodTheme(activeMood);
 
@@ -836,6 +893,13 @@ export default function App() {
               isUnauthorizedDomain={isUnauthorizedDomain}
               statusReactions={statusReactions}
               onAcknowledgeReactions={handleAcknowledgeReactions}
+              user={currentUser}
+              croodFriends={croodFriends}
+              planners={dailyPlanners}
+              onSavePlanner={handleSaveDailyPlanner}
+              onDeletePlanner={handleDeleteDailyPlanner}
+              onSignIn={handleSignIn}
+              onGoToCroods={() => setActiveTab('croods')}
             />
           )}
 
