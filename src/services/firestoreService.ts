@@ -338,6 +338,7 @@ export const firestoreService = {
           id: data.id || d.id,
           userId: data.userId,
           date: data.date,
+          timeSlot: data.timeSlot as MoodEntry['timeSlot'],
           timestamp: data.timestamp || Date.now(),
           mood: data.mood as MoodLevel,
           reason: data.reason,
@@ -346,7 +347,7 @@ export const firestoreService = {
           xpEarned: data.xpEarned || 20,
         });
       });
-      return entries;
+      return storageService.normalizeMoodEntries(entries);
     } catch (error) {
       if (isQuotaExceededError(error)) {
         notifyQuotaExceeded();
@@ -374,6 +375,7 @@ export const firestoreService = {
             id: data.id || d.id,
             userId: data.userId,
             date: data.date,
+            timeSlot: data.timeSlot as MoodEntry['timeSlot'],
             timestamp: data.timestamp || Date.now(),
             mood: data.mood as MoodLevel,
             reason: data.reason,
@@ -382,7 +384,7 @@ export const firestoreService = {
             xpEarned: data.xpEarned || 20,
           });
         });
-        onNext(entries);
+        onNext(storageService.normalizeMoodEntries(entries));
       },
       (error) => {
         if (isQuotaExceededError(error)) {
@@ -397,6 +399,41 @@ export const firestoreService = {
         }
       }
     );
+  },
+
+  /**
+   * Purges all historical mood log entries from Firestore except today's entries.
+   */
+  async purgeHistoricalEntriesExceptToday(userId: string): Promise<number> {
+    if (!userId) return 0;
+    const today = getTodayDateString();
+    const path = `users/${userId}/entries`;
+    try {
+      const snapshot = await getDocs(collection(db, path));
+      const deletePromises: Promise<void>[] = [];
+      let deletedCount = 0;
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const entryDate = data.date;
+        if (entryDate && entryDate !== today) {
+          deletedCount++;
+          deletePromises.push(deleteDoc(docSnap.ref));
+        }
+      });
+
+      if (deletePromises.length > 0) {
+        await Promise.all(deletePromises);
+      }
+      return deletedCount;
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        notifyQuotaExceeded();
+        return 0;
+      }
+      handleFirestoreError(error, OperationType.DELETE, path);
+      return 0;
+    }
   },
 
   async fetchUserStats(userId: string): Promise<GamificationStats | null> {
@@ -448,6 +485,9 @@ export const firestoreService = {
         xpEarned: entry.xpEarned,
       };
 
+      if (entry.timeSlot) {
+        entryPayload.timeSlot = entry.timeSlot;
+      }
       if (entry.reason !== undefined) {
         entryPayload.reason = entry.reason;
       }

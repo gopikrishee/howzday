@@ -1,4 +1,4 @@
-import { MoodEntry, GamificationStats, MoodLevel, StatusReaction } from '../types';
+import { MoodEntry, GamificationStats, MoodLevel, StatusReaction, MoodTimeSlot } from '../types';
 
 const STORAGE_KEYS = {
   ENTRIES: 'daily_mood_entries_v1',
@@ -34,11 +34,58 @@ export const getNextDateString = (dateStr: string): string => {
 };
 
 /**
+ * Returns the 8-hour diurnal time slot for mood logging:
+ * 1. 12AM - 8AM (Hours 00:00 to 07:59) -> 'slot_12am_8am'
+ * 2. 8AM - 4PM (Hours 08:00 to 15:59) -> 'slot_8am_4pm'
+ * 3. 4PM - 12AM (Hours 16:00 to 23:59) -> 'slot_4pm_12am'
+ */
+export const getMoodTimeSlot = (d: Date = new Date()): MoodTimeSlot => {
+  const hour = d.getHours();
+  if (hour >= 0 && hour < 8) {
+    return 'slot_12am_8am';
+  } else if (hour >= 8 && hour < 16) {
+    return 'slot_8am_4pm';
+  } else {
+    return 'slot_4pm_12am';
+  }
+};
+
+/**
+ * Normalizes and deduplicates a list of mood entries to ensure:
+ * - Each day has at most 3 entries (one per time slot: 12AM-8AM, 8AM-4PM, 4PM-12AM)
+ * - The latest mood change within each time slot is preserved
+ * - Entries are sorted by timestamp in descending order (newest first)
+ */
+export const normalizeMoodEntries = (entries: MoodEntry[]): MoodEntry[] => {
+  if (!entries || entries.length === 0) return [];
+  // Sort descending by timestamp
+  const sorted = [...entries].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  const slotMap = new Map<string, MoodEntry>();
+  const normalized: MoodEntry[] = [];
+
+  for (const item of sorted) {
+    if (!item || !item.date) continue;
+    const timeSlot = item.timeSlot || getMoodTimeSlot(new Date(item.timestamp || Date.now()));
+    const key = `${item.date}_${timeSlot}`;
+    if (!slotMap.has(key)) {
+      const normalizedItem: MoodEntry = {
+        ...item,
+        timeSlot,
+      };
+      slotMap.set(key, normalizedItem);
+      normalized.push(normalizedItem);
+    }
+  }
+
+  return normalized;
+};
+
+/**
  * Calculates the exact daily streak and check-in stats directly from user mood entries.
  * Rule:
- * 1. A day is checked in if there is an entry with date === that day.
+ * 1. A day is checked in if there is at least one entry with date === that day.
  * 2. If the user checks in any mood for that day, the streak is increased by 1 (from previous consecutive days).
- * 3. Editing or saving another mood on the same day does NOT increase the streak again.
+ * 3. Multiple entries on the same day (up to 3 time slots) count towards that same single day.
  * 4. If the user has not checked in yet today, the streak remains at yesterday's achieved streak (awaiting today's check-in).
  * 5. If yesterday was not checked in and today is not checked in, the streak is broken (0).
  */
@@ -125,49 +172,11 @@ const DEFAULT_STATS: GamificationStats = {
   unlockedBadges: ['first_step'],
 };
 
-// Seed sample past entries for demonstration if storage is completely empty (strictly past days)
-const createSeedEntries = (): MoodEntry[] => {
-  const today = new Date();
-  const d3 = new Date(today);
-  d3.setDate(d3.getDate() - 3);
-  const d2 = new Date(today);
-  d2.setDate(d2.getDate() - 2);
-  const d1 = new Date(today);
-  d1.setDate(d1.getDate() - 1);
-
-  return [
-    {
-      id: 'seed-3',
-      date: getTodayDateString(d3),
-      timestamp: d3.getTime(),
-      mood: 'happy',
-      reason: 'Went for a morning run and grabbed iced coffee with friends!',
-      tags: ['Exercise', 'Friends'],
-      xpEarned: 35,
-    },
-    {
-      id: 'seed-2',
-      date: getTodayDateString(d2),
-      timestamp: d2.getTime(),
-      mood: 'neutral',
-      reason: 'Quiet workday, kept steady pacing throughout meetings.',
-      tags: ['Work'],
-      xpEarned: 35,
-    },
-    {
-      id: 'seed-1',
-      date: getTodayDateString(d1),
-      timestamp: d1.getTime(),
-      mood: 'happy',
-      isPrivateReason: true,
-      xpEarned: 20,
-    },
-  ];
-};
-
 export const storageService = {
   getTodayDateString,
   getYesterdayDateString,
+  getMoodTimeSlot,
+  normalizeMoodEntries,
 
   getUserEntriesKey(userId?: string): string {
     return userId ? `daily_mood_entries_${userId}` : STORAGE_KEYS.ENTRIES;
@@ -244,23 +253,45 @@ export const storageService = {
       const key = this.getUserEntriesKey(userId);
       const stored = localStorage.getItem(key);
       if (!stored) {
-        if (userId) {
-          return [];
-        }
-        const seeds = createSeedEntries();
-        localStorage.setItem(key, JSON.stringify(seeds));
-        return seeds;
+        return [];
       }
-      return JSON.parse(stored);
+      const parsed: MoodEntry[] = JSON.parse(stored);
+      return normalizeMoodEntries(parsed);
     } catch {
-      return userId ? [] : createSeedEntries();
+      return [];
     }
   },
 
   getTodayEntry(userId?: string): MoodEntry | null {
     const today = getTodayDateString();
     const entries = this.getEntries(userId);
-    return entries.find((e) => e.date === today) || null;
+    const todayEntries = entries.filter((e) => e.date === today);
+    if (todayEntries.length === 0) return null;
+    // Return the latest mood entry recorded today
+    return todayEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+  },
+
+  purgeHistoricalEntriesExceptToday(userId?: string): MoodEntry[] {
+    try {
+      const today = getTodayDateString();
+      const entriesKey = this.getUserEntriesKey(userId);
+      const currentEntries = this.getEntries(userId);
+      const todayOnly = currentEntries.filter((e) => e.date === today);
+      localStorage.setItem(entriesKey, JSON.stringify(todayOnly));
+
+      // Refresh stats
+      const streakStats = calculateStreakStats(todayOnly, today);
+      const stats = this.getStats(userId);
+      stats.currentStreak = streakStats.currentStreak;
+      stats.longestStreak = Math.max(stats.longestStreak || 0, streakStats.longestStreak);
+      stats.totalCheckIns = streakStats.totalCheckIns;
+      stats.todayCompleted = streakStats.todayCompleted;
+      localStorage.setItem(this.getUserStatsKey(userId), JSON.stringify(stats));
+
+      return todayOnly;
+    } catch {
+      return [];
+    }
   },
 
   getStats(userId?: string): GamificationStats {
@@ -269,7 +300,7 @@ export const storageService = {
       const stored = localStorage.getItem(key);
       const today = getTodayDateString();
       const entries = this.getEntries(userId);
-      const todayEntry = entries.find((e) => e.date === today);
+      const todayEntry = this.getTodayEntry(userId);
       const streakStats = calculateStreakStats(entries, today);
 
       if (stored) {
@@ -316,11 +347,12 @@ export const storageService = {
   cacheCloudData(userId: string, cloudEntries: MoodEntry[], cloudStats?: GamificationStats | null): void {
     try {
       if (userId) {
+        const normalized = normalizeMoodEntries(cloudEntries);
         const entriesKey = this.getUserEntriesKey(userId);
-        localStorage.setItem(entriesKey, JSON.stringify(cloudEntries));
+        localStorage.setItem(entriesKey, JSON.stringify(normalized));
 
         const today = getTodayDateString();
-        const streakStats = calculateStreakStats(cloudEntries, today);
+        const streakStats = calculateStreakStats(normalized, today);
 
         const statsKey = this.getUserStatsKey(userId);
         const statsToSave: GamificationStats = {
@@ -328,10 +360,10 @@ export const storageService = {
           currentStreak: streakStats.currentStreak,
           longestStreak: Math.max(cloudStats?.longestStreak || 0, streakStats.longestStreak),
           totalCheckIns: streakStats.totalCheckIns,
-          currentXp: cloudStats?.currentXp ?? cloudEntries.reduce((acc, curr) => acc + (curr.xpEarned || 20), 0),
+          currentXp: cloudStats?.currentXp ?? normalized.reduce((acc, curr) => acc + (curr.xpEarned || 20), 0),
           level: cloudStats?.level ?? (Math.floor((cloudStats?.currentXp ?? 0) / 100) + 1),
           todayCompleted: streakStats.todayCompleted,
-          lastCheckInDate: streakStats.todayCompleted ? today : (cloudEntries.length > 0 ? cloudEntries[0].date : undefined),
+          lastCheckInDate: streakStats.todayCompleted ? today : (normalized.length > 0 ? normalized[0].date : undefined),
           unlockedBadges: cloudStats?.unlockedBadges || ['first_step'],
         };
         localStorage.setItem(statsKey, JSON.stringify(statsToSave));
@@ -355,10 +387,18 @@ export const storageService = {
     alreadyExhaustedMaxDailyXp: boolean;
     shouldCelebrate: boolean;
   }> {
-    const today = getTodayDateString();
+    const now = new Date();
+    const today = getTodayDateString(now);
+    const timeSlot = getMoodTimeSlot(now);
+    const slotEntryId = `entry_${today}_${timeSlot}`;
+
     const entries = this.getEntries(params.userId);
-    const existingIndex = entries.findIndex((e) => e.date === today);
-    const existingEntry = existingIndex >= 0 ? entries[existingIndex] : null;
+    const todayEntries = entries.filter((e) => e.date === today);
+
+    const existingSlotIndex = entries.findIndex(
+      (e) => e.id === slotEntryId || (e.date === today && e.timeSlot === timeSlot)
+    );
+    const existingSlotEntry = existingSlotIndex >= 0 ? entries[existingSlotIndex] : null;
 
     // Determine if notes/reason or tags are provided
     const hasNotes =
@@ -374,11 +414,11 @@ export const storageService = {
     // 1. Quick mood only - award 20 XP (day total: 20)
     // 2. Added notes - award 35 XP (day total: 35)
     // 3. Quick mood first and added notes later on that day - award 15 XP (day total: 35)
-    // - Any subsequent mood or note changes once capped or if no notes added: +0 XP
     // - Max XP per day never exceeds 35
-    const previousDayXp = existingEntry
-      ? (existingEntry.xpEarned ?? (existingEntry.isPrivateReason ? 20 : 35))
-      : 0;
+    const previousDayXp = todayEntries.reduce(
+      (max, e) => Math.max(max, e.xpEarned ?? (e.isPrivateReason ? 20 : 35)),
+      0
+    );
 
     let targetDayXp = previousDayXp;
     if (previousDayXp === 0) {
@@ -390,42 +430,41 @@ export const storageService = {
     targetDayXp = Math.min(35, targetDayXp);
     const deltaXp = Math.max(0, targetDayXp - previousDayXp);
 
-    // If user already exhausted 35 XP for today, any upcoming mood change or notes save
-    // must NOT trigger the celebration modal.
     const alreadyExhaustedMaxDailyXp = previousDayXp >= 35;
     const shouldCelebrate = !alreadyExhaustedMaxDailyXp && deltaXp > 0;
 
     const newEntry: MoodEntry = {
-      id: existingEntry ? existingEntry.id : `entry-${Date.now()}`,
+      id: slotEntryId,
       userId: params.userId,
       date: today,
+      timeSlot,
       timestamp: Date.now(),
       mood: params.mood,
       reason: isQuickMood ? undefined : (params.reason?.trim() || undefined),
       isPrivateReason: isQuickMood,
       tags: !isQuickMood && params.tags && params.tags.length > 0 ? params.tags : undefined,
       xpEarned: targetDayXp,
+      updatedAt: new Date().toISOString(),
     };
 
-    if (existingIndex >= 0) {
+    if (existingSlotIndex >= 0) {
       // If mood has changed, clear previous reactions
-      if (entries[existingIndex].mood !== params.mood) {
+      if (entries[existingSlotIndex].mood !== params.mood) {
         this.clearLocalReactions(params.userId);
       }
-      entries[existingIndex] = newEntry;
+      entries[existingSlotIndex] = newEntry;
     } else {
-      // First check-in or brand new mood, start with clean reactions
+      // New slot entry for today
       this.clearLocalReactions(params.userId);
       entries.unshift(newEntry);
     }
 
+    const normalizedEntries = normalizeMoodEntries(entries);
     const entriesKey = this.getUserEntriesKey(params.userId);
-    localStorage.setItem(entriesKey, JSON.stringify(entries));
+    localStorage.setItem(entriesKey, JSON.stringify(normalizedEntries));
 
-    // Calculate streak stats dynamically from the updated entries:
-    // If the user checks in any mood for that day, the streak is increased by 1.
-    // Re-saving or editing the mood on the same day maintains the streak without increasing it again.
-    const streakStats = calculateStreakStats(entries, today);
+    // Calculate streak stats dynamically from the updated entries
+    const streakStats = calculateStreakStats(normalizedEntries, today);
     const currentStats = this.getStats(params.userId);
 
     const newTotalXp = currentStats.currentXp + deltaXp;
@@ -476,3 +515,4 @@ export const storageService = {
     return stats;
   },
 };
+

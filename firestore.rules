@@ -102,6 +102,7 @@ service cloud.firestore {
         && data.userId is string && data.userId == userId
         && data.date is string && data.date.size() == 10 && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && data.mood is string && (data.mood == 'happy' || data.mood == 'neutral' || data.mood == 'sad' || data.mood == 'angry' || data.mood == 'tired' || data.mood == 'relax' || data.mood == 'sleepy' || data.mood == 'romantic' || data.mood == 'sick')
+        && (!('timeSlot' in data) || (data.timeSlot is string && data.timeSlot.size() <= 30))
         && (!('reason' in data) || (data.reason is string && data.reason.size() <= 1000))
         && (!('isPrivateReason' in data) || data.isPrivateReason is bool)
         && (!('tags' in data) || (data.tags is list && data.tags.size() <= 10))

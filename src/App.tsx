@@ -68,6 +68,18 @@ export default function App() {
       if (user) {
         setIsCloudSynced(true);
 
+        // One-time historical cleanup to purge old data prior to today
+        const cleanupKey = `howzday_historical_cleanup_done_${user.uid}`;
+        if (!localStorage.getItem(cleanupKey)) {
+          try {
+            await firestoreService.purgeHistoricalEntriesExceptToday(user.uid);
+          } catch (err) {
+            console.warn('Could not purge historical Firestore entries:', err);
+          }
+          storageService.purgeHistoricalEntriesExceptToday(user.uid);
+          localStorage.setItem(cleanupKey, 'true');
+        }
+
         // Instantly load user-scoped local cache to prevent any layout/mood flicker
         const userCachedToday = storageService.getTodayEntry(user.uid);
         const userCachedStats = storageService.getStats(user.uid);
@@ -94,7 +106,8 @@ export default function App() {
           if (remoteEntries && remoteEntries.length > 0) {
             setEntries(remoteEntries);
             const today = getTodayDateString();
-            const todayCloud = remoteEntries.find((e) => e.date === today);
+            const todayEntries = remoteEntries.filter((e) => e.date === today);
+            const todayCloud = todayEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
             setTodayEntry(todayCloud || null);
             storageService.cacheCloudData(user.uid, remoteEntries, remoteStats);
             setStats(storageService.getStats(user.uid));
@@ -116,6 +129,11 @@ export default function App() {
         }
       } else {
         setIsCloudSynced(false);
+        const guestCleanupKey = 'howzday_guest_cleanup_done';
+        if (!localStorage.getItem(guestCleanupKey)) {
+          storageService.purgeHistoricalEntriesExceptToday();
+          localStorage.setItem(guestCleanupKey, 'true');
+        }
         const localToday = storageService.getTodayEntry();
         setTodayEntry(localToday || null);
         setStats(storageService.getStats());
@@ -136,7 +154,8 @@ export default function App() {
         if (cloudEntries.length > 0) {
           setEntries(cloudEntries);
           const today = getTodayDateString();
-          const todayCloud = cloudEntries.find((e) => e.date === today);
+          const todayEntries = cloudEntries.filter((e) => e.date === today);
+          const todayCloud = todayEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
           setTodayEntry(todayCloud || null);
           const currentStats = storageService.getStats(currentUser.uid);
           storageService.cacheCloudData(currentUser.uid, cloudEntries, currentStats);

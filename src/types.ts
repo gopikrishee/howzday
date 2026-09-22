@@ -9,6 +9,8 @@ export type MoodLevel =
   | 'romantic'
   | 'sick';
 
+export type MoodTimeSlot = 'slot_12am_8am' | 'slot_8am_4pm' | 'slot_4pm_12am';
+
 export interface MoodConfig {
   id: MoodLevel;
   label: string;
@@ -27,6 +29,7 @@ export interface MoodEntry {
   id: string;
   userId?: string;
   date: string; // YYYY-MM-DD
+  timeSlot?: MoodTimeSlot; // slot_12am_8am, slot_8am_4pm, slot_4pm_12am
   timestamp: number;
   mood: MoodLevel;
   reason?: string;

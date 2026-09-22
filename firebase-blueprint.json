@@ -23,6 +23,11 @@
           "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
           "maxLength": 10
         },
+        "timeSlot": {
+          "type": "string",
+          "description": "8-hour diurnal window slot (slot_12am_8am, slot_8am_4pm, slot_4pm_12am)",
+          "enum": ["slot_12am_8am", "slot_8am_4pm", "slot_4pm_12am"]
+        },
         "mood": {
           "type": "string",
           "description": "Mood rating for the day",
