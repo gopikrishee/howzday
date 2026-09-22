@@ -20,7 +20,6 @@ import {
   Target,
   User as UserIcon,
   Calendar,
-  Layers,
 } from 'lucide-react';
 import { getTodayDateString } from '../services/storageService';
 
@@ -50,9 +49,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   todayMoodEntry,
   planners,
   onSavePlanner,
-  onDeletePlanner,
   onBackToMoods,
-  onSignIn,
 }) => {
   const [activePlannerId, setActivePlannerId] = useState<string | null>(null);
 
@@ -64,10 +61,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
 
   // Filter tasks tab
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
-
-  // New planner creation modal / inline input state
-  const [showNewPlanInput, setShowNewPlanInput] = useState(false);
-  const [newPlanTitle, setNewPlanTitle] = useState('');
 
   // Current selected planner or fallback to first available
   const currentPlanner = useMemo(() => {
@@ -146,39 +139,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
     return { collaboratorIds, attachedCroodIds, collaborators };
   };
 
-  // Handle creating a new planner
-  const handleCreatePlanner = async (customTitle?: string) => {
-    const creatorId = user ? user.uid : 'guest';
-    const creatorName = user?.displayName || user?.email?.split('@')[0] || 'Me';
-    const creatorPhoto = user?.photoURL || undefined;
-
-    const newPlanner: DailyPlanner = {
-      id: `plan_${creatorId}_${Date.now()}`,
-      ownerId: creatorId,
-      ownerName: creatorName,
-      ownerPhoto: creatorPhoto,
-      date: getTodayDateString(),
-      title: customTitle?.trim() || 'Daily Task Planner',
-      attachedCroodIds: [],
-      collaboratorIds: [creatorId],
-      collaborators: [
-        {
-          uid: creatorId,
-          displayName: creatorName,
-          photoURL: creatorPhoto,
-        },
-      ],
-      tasks: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await onSavePlanner(newPlanner);
-    setActivePlannerId(newPlanner.id);
-    setShowNewPlanInput(false);
-    setNewPlanTitle('');
-  };
-
   const activePlan = currentPlanner;
 
   // Add task handler
@@ -203,7 +163,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           ownerName: creatorName,
           ownerPhoto: creatorPhoto,
           date: getTodayDateString(),
-          title: 'Daily Task Planner',
+          title: 'Focus & Goals Planner',
           attachedCroodIds: [],
           collaboratorIds: [creatorId],
           collaborators: [
@@ -430,11 +390,10 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   }, [activePlan, taskFilter]);
 
   const activeMoodConfig = todayMoodEntry ? getMoodConfig(todayMoodEntry.mood) : null;
-  const isOwner = !activePlan || activePlan.ownerId === (user?.uid || 'guest');
 
   return (
     <div id="collaborate-panel" className="flex-1 flex flex-col relative space-y-4">
-      {/* Top Header with Back Navigation and Plan Selector */}
+      {/* Top Header with Back Navigation and Live Collab Indicator */}
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
@@ -446,31 +405,9 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           <span>Mood Pulse</span>
         </button>
 
-        <div className="inline-flex items-center gap-2">
-          {planners.length > 1 && (
-            <div className="flex items-center gap-1 bg-white/90 backdrop-blur-xs px-2 py-1 rounded-full border border-slate-200/90 shadow-2xs">
-              <Layers className="w-3.5 h-3.5 text-indigo-600" />
-              <select
-                value={activePlan?.id || ''}
-                onChange={(e) => setActivePlannerId(e.target.value)}
-                className="text-[11px] font-bold text-slate-700 bg-transparent border-none focus:outline-none cursor-pointer pr-1"
-              >
-                {planners.map((p) => {
-                  const isPlanOwner = p.ownerId === (user?.uid || 'guest');
-                  return (
-                    <option key={p.id} value={p.id}>
-                      {isPlanOwner ? `My Plan: ${p.title}` : `${p.ownerName}'s Plan`}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          )}
-
-          <div className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-full border border-slate-200/90 shadow-2xs text-[11px] font-bold text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Shared Planner</span>
-          </div>
+        <div className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-full border border-slate-200/90 shadow-2xs text-[11px] font-bold text-slate-600">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Live Collab</span>
         </div>
       </div>
 
@@ -480,10 +417,10 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-1">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600 fill-indigo-600/30" />
-              <span>{isOwner ? 'My Collaborative Plan' : `Shared by ${activePlan?.ownerName || 'Crood'}`}</span>
+              <span>Collaborative Planner</span>
             </div>
             <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-tight truncate">
-              {activePlan?.title || 'Daily Task Planner'}
+              {activePlan?.title || 'Focus & Goals Planner'}
             </h2>
             <p className="text-xs text-slate-600 mt-0.5">
               Co-plan and assign focus goals together. Assigned tasks appear live on your Crood’s planner.
@@ -519,67 +456,13 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           </div>
         )}
 
-        {/* Plan meta & action bar */}
+        {/* Plan meta bar */}
         <div className="pt-2 border-t border-slate-100/90 flex items-center justify-between gap-2 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>{activePlan?.date || getTodayDateString()}</span>
-            {!isOwner && activePlan && (
-              <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
-                From {activePlan.ownerName}
-              </span>
-            )}
           </div>
-
-          {/* Create new plan button */}
-          <button
-            type="button"
-            onClick={() => setShowNewPlanInput((prev) => !prev)}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer transition-colors"
-          >
-            <Plus className="w-3 h-3 stroke-[2.5]" />
-            <span>New Plan</span>
-          </button>
         </div>
-
-        {/* Inline new plan creator */}
-        {showNewPlanInput && (
-          <div className="p-3 bg-white rounded-2xl border border-indigo-200 shadow-2xs flex items-center gap-2">
-            <input
-              type="text"
-              value={newPlanTitle}
-              onChange={(e) => setNewPlanTitle(e.target.value)}
-              placeholder="Enter new plan name (e.g. Project Sprint, Weekend Goals)..."
-              className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (newPlanTitle.trim()) handleCreatePlanner(newPlanTitle);
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                if (newPlanTitle.trim()) handleCreatePlanner(newPlanTitle);
-              }}
-              disabled={!newPlanTitle.trim()}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-            >
-              Create
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowNewPlanInput(false);
-                setNewPlanTitle('');
-              }}
-              className="px-2.5 py-1.5 text-slate-500 hover:text-slate-800 text-xs font-medium cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Mood & Focus Synergy Card */}
@@ -746,18 +629,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
             Done ({completedTasksCount})
           </button>
         </div>
-
-        {isOwner && activePlan && planners.length > 1 && (
-          <button
-            type="button"
-            onClick={() => onDeletePlanner(activePlan.id)}
-            className="text-[11px] font-medium text-rose-500 hover:text-rose-700 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Delete this planner"
-          >
-            <Trash2 className="w-3 h-3" />
-            <span>Delete Plan</span>
-          </button>
-        )}
       </div>
 
       {/* Tasks List */}
