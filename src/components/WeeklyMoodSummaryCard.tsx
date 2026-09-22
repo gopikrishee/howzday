@@ -23,11 +23,6 @@ interface DaySummary {
   isToday: boolean;
   entries: MoodEntry[];
   primaryMood: MoodLevel | null;
-  slots: {
-    morning: MoodEntry | null; // 12AM - 8AM
-    afternoon: MoodEntry | null; // 8AM - 4PM
-    evening: MoodEntry | null; // 4PM - 12AM
-  };
 }
 
 export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
@@ -58,14 +53,6 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
         (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
       );
 
-      // Map by slot
-      const morning =
-        sortedDayEntries.find((e) => e.timeSlot === 'slot_12am_8am') || null;
-      const afternoon =
-        sortedDayEntries.find((e) => e.timeSlot === 'slot_8am_4pm') || null;
-      const evening =
-        sortedDayEntries.find((e) => e.timeSlot === 'slot_4pm_12am') || null;
-
       const primaryMood = sortedDayEntries.length > 0 ? sortedDayEntries[0].mood : null;
 
       days.push({
@@ -75,7 +62,6 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
         isToday,
         entries: sortedDayEntries,
         primaryMood,
-        slots: { morning, afternoon, evening },
       });
     }
 
@@ -173,32 +159,26 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 relative z-10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100/90 text-indigo-600 flex items-center justify-center shrink-0 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-50 border border-indigo-100/90 text-indigo-600 flex items-center justify-center shrink-0 shadow-2xs">
             <BarChart3 className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600">
-                Insights • Past 7 Days
-              </span>
-              <span className="inline-block w-1 h-1 rounded-full bg-slate-300" />
-              <span className="text-[10px] font-semibold text-slate-400">
-                {dateRangeLabel}
-              </span>
-            </div>
             <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
               Weekly Mood Summary
             </h3>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+              Past 7 Days &bull; {dateRangeLabel}
+            </p>
           </div>
         </div>
 
         {/* Quick Stats Pill */}
-        <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-full text-right">
-          <Calendar className="w-3 h-3 text-slate-500" />
-          <span className="text-[11px] font-bold text-slate-700">
-            {activeDaysCount}/7 days active
+        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-full text-slate-700">
+          <Calendar className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-xs font-bold whitespace-nowrap">
+            {activeDaysCount} of 7 days active
           </span>
         </div>
       </div>
@@ -214,7 +194,7 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
               No Mood Logs in the Past 7 Days
             </h4>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed font-medium">
-              Start checking in on the Moods screen to view your weekly emotional distribution, trends, and diurnal rhythms here.
+              Start checking in on the Moods screen to view your weekly emotional distribution and trends here.
             </p>
           </div>
           {onNavigateToMoods && (
@@ -229,43 +209,58 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
         </div>
       ) : (
         <>
-          {/* Dominant Emotional Climate Pill / Card */}
+          {/* Dominant Emotional Climate Card */}
           {dominantMoodItem && (
             <div
-              className="p-3 sm:p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all"
+              className="p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all"
               style={{
-                backgroundColor: `${dominantMoodItem.config.primaryColor}10`,
-                borderColor: `${dominantMoodItem.config.primaryColor}30`,
+                backgroundColor: `${dominantMoodItem.config.primaryColor}0C`,
+                borderColor: `${dominantMoodItem.config.primaryColor}28`,
               }}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-2xl sm:text-3xl shrink-0 select-none">
-                  {dominantMoodItem.config.emoji}
-                </span>
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-2xs border select-none"
+                  style={{
+                    backgroundColor: `${dominantMoodItem.config.primaryColor}18`,
+                    borderColor: `${dominantMoodItem.config.primaryColor}30`,
+                  }}
+                >
+                  <span>{dominantMoodItem.config.emoji}</span>
+                </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                      Dominant Energy
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      Dominant Mood
                     </span>
-                    <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-md bg-white border border-slate-200/80 text-slate-700">
+                    <span
+                      className="text-[10px] font-black px-1.5 py-0.5 rounded-md"
+                      style={{
+                        backgroundColor: `${dominantMoodItem.config.primaryColor}20`,
+                        color: dominantMoodItem.config.primaryColor,
+                      }}
+                    >
                       {dominantMoodItem.percentage}%
                     </span>
                   </div>
                   <h4
-                    className="text-sm font-black truncate"
+                    className="text-sm font-black mt-0.5 leading-tight"
                     style={{ color: dominantMoodItem.config.primaryColor }}
                   >
-                    {dominantMoodItem.config.label} &bull; {dominantMoodItem.config.tagline}
+                    {dominantMoodItem.config.label}
+                    <span className="text-slate-500 font-semibold text-xs ml-1.5">
+                      &bull; {dominantMoodItem.config.tagline}
+                    </span>
                   </h4>
                 </div>
               </div>
 
-              <div className="text-right shrink-0">
-                <span className="text-[11px] font-bold text-slate-500 block">
-                  Weekly Total
+              <div className="text-right shrink-0 pl-3 border-l border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
+                  Total
                 </span>
-                <span className="text-xs font-black text-slate-800">
-                  {distribution.total} {distribution.total === 1 ? 'check-in' : 'check-ins'}
+                <span className="text-xs font-black text-slate-800 whitespace-nowrap">
+                  {distribution.total} {distribution.total === 1 ? 'log' : 'logs'}
                 </span>
               </div>
             </div>
@@ -360,7 +355,7 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
             </div>
 
             {/* Grid of 7 days */}
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {past7DaysData.map((day) => {
                 const isSelected = selectedDayDate === day.dateStr;
                 const hasEntries = day.entries.length > 0;
@@ -373,79 +368,39 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
                     onClick={() =>
                       setSelectedDayDate(isSelected ? null : day.dateStr)
                     }
-                    className={`flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer text-center relative ${
+                    className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl border transition-all cursor-pointer text-center relative min-h-[66px] ${
                       isSelected
-                        ? 'bg-indigo-50 border-indigo-400 shadow-xs scale-102'
+                        ? 'bg-indigo-50 border-indigo-400 shadow-xs ring-2 ring-indigo-200 scale-102'
                         : day.isToday
-                        ? 'bg-amber-50/80 border-amber-300'
+                        ? 'bg-amber-50/90 border-amber-300 shadow-2xs'
                         : hasEntries
-                        ? 'bg-slate-50/90 hover:bg-white border-slate-200'
+                        ? 'bg-slate-50/90 hover:bg-white border-slate-200 shadow-2xs'
                         : 'bg-slate-50/40 border-slate-200/60 opacity-60'
                     }`}
                   >
-                    {/* Day label (e.g. "Mon") */}
+                    {/* Day label (e.g. "Mon" or "Today") */}
                     <span
-                      className={`text-[10px] font-black uppercase ${
-                        day.isToday ? 'text-amber-700' : 'text-slate-500'
+                      className={`text-[9px] sm:text-[10px] font-black uppercase tracking-tight leading-none ${
+                        day.isToday ? 'text-amber-800 font-extrabold' : 'text-slate-500'
                       }`}
                     >
                       {day.isToday ? 'Today' : day.dayLabel}
                     </span>
 
                     {/* Date Number (e.g. "22") */}
-                    <span className="text-xs font-black text-slate-800 my-0.5">
+                    <span className="text-xs font-black text-slate-800 my-1 leading-none">
                       {day.dateNum}
                     </span>
 
                     {/* Emoji or Empty State */}
-                    <div className="h-6 flex items-center justify-center my-0.5">
+                    <div className="h-5 flex items-center justify-center">
                       {moodConfig ? (
                         <span className="text-base select-none leading-none">
                           {moodConfig.emoji}
                         </span>
                       ) : (
-                        <span className="w-2 h-2 rounded-full bg-slate-300" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                       )}
-                    </div>
-
-                    {/* 3 Diurnal Micro Dots (Morning, Afternoon, Evening) */}
-                    <div className="flex items-center gap-0.5 mt-0.5">
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          day.slots.morning
-                            ? 'bg-amber-500'
-                            : 'bg-slate-200'
-                        }`}
-                        title={
-                          day.slots.morning
-                            ? `Morning: ${getMoodConfig(day.slots.morning.mood).label}`
-                            : 'Morning: No entry'
-                        }
-                      />
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          day.slots.afternoon
-                            ? 'bg-sky-500'
-                            : 'bg-slate-200'
-                        }`}
-                        title={
-                          day.slots.afternoon
-                            ? `Afternoon: ${getMoodConfig(day.slots.afternoon.mood).label}`
-                            : 'Afternoon: No entry'
-                        }
-                      />
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          day.slots.evening
-                            ? 'bg-indigo-500'
-                            : 'bg-slate-200'
-                        }`}
-                        title={
-                          day.slots.evening
-                            ? `Evening: ${getMoodConfig(day.slots.evening.mood).label}`
-                            : 'Evening: No entry'
-                        }
-                      />
                     </div>
                   </button>
                 );
