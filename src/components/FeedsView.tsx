@@ -35,9 +35,9 @@ const CHEER_OPTIONS = [
   { emoji: '✋', label: 'High Five' },
   { emoji: '❤️', label: 'Love' },
   { emoji: '🤗', label: 'Hug' },
-  { emoji: '🤝', label: 'I am with you' },
+  { emoji: '🤝', label: 'With you' },
   { emoji: '🥺', label: 'Sorry' },
-  { emoji: '😒', label: 'annoyed' },
+  { emoji: '😒', label: 'Annoyed' },
 ];
 
 export const FeedsView: React.FC<FeedsViewProps> = ({
@@ -367,29 +367,33 @@ export const FeedsView: React.FC<FeedsViewProps> = ({
                   )}
                 </AnimatePresence>
 
-                <div className="flex items-center flex-wrap gap-1.5">
-                  <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider mr-1">
+                <div className="flex items-center flex-wrap gap-1 sm:gap-1.5">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider mr-0.5">
                     Cheer:
                   </span>
-                  {CHEER_OPTIONS.map((opt) => {
-                    const isSelected = activeCheer?.emoji === opt.emoji;
-                    return (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        onClick={() => handleTriggerReaction(friend, opt.emoji, opt.label)}
-                        className={`p-1 px-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer border active:scale-95 shadow-2xs ${
-                          isSelected
-                            ? 'bg-rose-100 border-rose-300 text-rose-950 scale-105 shadow-xs'
-                            : 'bg-slate-100 hover:bg-amber-50 hover:scale-105 text-slate-800 border-slate-200/80'
-                        }`}
-                        title={opt.label}
-                      >
-                        <span className="text-sm mr-1 leading-none">{opt.emoji}</span>
-                        <span className="hidden sm:inline text-[10px]">{opt.label}</span>
-                      </button>
-                    );
-                  })}
+                  <div className="flex items-center flex-wrap gap-1 sm:gap-1.5">
+                    {CHEER_OPTIONS.map((opt) => {
+                      const isSelected = activeCheer?.emoji === opt.emoji;
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => handleTriggerReaction(friend, opt.emoji, opt.label)}
+                          className={`flex flex-col items-center justify-center py-1 px-1.5 sm:px-2 rounded-xl font-bold transition-all cursor-pointer border active:scale-95 shadow-2xs min-w-[38px] sm:min-w-[46px] ${
+                            isSelected
+                              ? 'bg-rose-100 border-rose-300 text-rose-950 scale-105 shadow-xs'
+                              : 'bg-slate-100 hover:bg-amber-50 hover:scale-105 text-slate-800 border-slate-200/80'
+                          }`}
+                          title={opt.label}
+                        >
+                          <span className="text-base leading-none select-none">{opt.emoji}</span>
+                          <span className="text-[8px] sm:text-[9px] font-bold leading-tight mt-0.5 text-slate-600 whitespace-nowrap select-none">
+                            {opt.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2">
