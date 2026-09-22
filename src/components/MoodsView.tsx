@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { User } from 'firebase/auth';
 import {
@@ -21,7 +21,6 @@ import {
   Pencil,
   Sparkles,
   Users,
-  ChevronRight,
   Smile,
 } from 'lucide-react';
 
@@ -77,10 +76,6 @@ export const MoodsView: React.FC<MoodsViewProps> = ({
   const [subTab, setSubTab] = useState<'moods' | 'collaborate'>('moods');
   const [isUnlocked, setIsUnlocked] = useState(false);
 
-  // Swipe gesture tracking refs
-  const touchStartXRef = useRef<number>(0);
-  const touchStartYRef = useRef<number>(0);
-
   // Automatically reset unlock state when today's entry changes
   useEffect(() => {
     setIsUnlocked(false);
@@ -101,39 +96,11 @@ export const MoodsView: React.FC<MoodsViewProps> = ({
   const activeMoodConfig = todayEntry ? getMoodConfig(todayEntry.mood) : null;
   const activeTheme = getMoodTheme(selectedMood || todayEntry?.mood);
 
-  // Touch handlers for swipe gesture between Moods and Collaborate
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    const deltaX = touchEndX - touchStartXRef.current;
-    const deltaY = touchEndY - touchStartYRef.current;
-
-    // Check if horizontal swipe is predominant
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 40) {
-      if (subTab === 'moods' && deltaX > 40) {
-        // Swiped right from moods panel -> Open Collaborate
-        setSubTab('collaborate');
-      } else if (subTab === 'collaborate' && deltaX < -40) {
-        // Swiped left from collaborate panel -> Return to Moods
-        setSubTab('moods');
-      }
-    }
-  };
-
   return (
-    <div
-      className="flex-1 flex flex-col relative"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="flex-1 flex flex-col relative">
       {/* Top Segmented Switcher Pill Bar between Mood Pulse & Collaborate */}
       <div className="mb-3.5 flex items-center justify-between gap-2">
-        <div className="p-1 bg-white/80 backdrop-blur-xs rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-1 w-full max-w-xs">
+        <div className="p-1 bg-white/80 backdrop-blur-xs rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-1 w-full sm:max-w-xs">
           <button
             type="button"
             id="tab-mood-pulse"
@@ -162,28 +129,6 @@ export const MoodsView: React.FC<MoodsViewProps> = ({
             <span>Collaborate</span>
           </button>
         </div>
-
-        {/* Quick Swipe Indicator Pill */}
-        {subTab === 'moods' ? (
-          <button
-            type="button"
-            onClick={() => setSubTab('collaborate')}
-            className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100/80 px-2.5 py-1.5 rounded-full border border-indigo-200/70 shadow-2xs transition-all cursor-pointer"
-            title="Swipe right or tap to open Collaborate"
-          >
-            <span>Collaborate</span>
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setSubTab('moods')}
-            className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full border border-slate-200 shadow-2xs transition-all cursor-pointer"
-            title="Return to Mood Pulse"
-          >
-            <span>← Moods</span>
-          </button>
-        )}
       </div>
 
       {/* Dynamic Animated Panel Switcher */}
@@ -285,24 +230,6 @@ export const MoodsView: React.FC<MoodsViewProps> = ({
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${activeTheme.pillColor} shrink-0 transition-colors shadow-2xs`}
               >
                 {selectedMood ? 'Previewing' : todayEntry ? 'Today’s Aura' : 'Balanced'}
-              </span>
-            </div>
-
-            {/* Gesture Helper Banner (Swipe Right to Collaborate) */}
-            <div
-              onClick={() => setSubTab('collaborate')}
-              className="mb-4 p-2.5 rounded-2xl bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-indigo-50/90 border border-indigo-100 flex items-center justify-between gap-2 text-xs text-indigo-900 cursor-pointer hover:bg-indigo-100/60 transition-all shadow-2xs active:scale-[0.99]"
-              title="Swipe right on this panel or tap to open Collaborate"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">👉</span>
-                <span className="font-bold text-[11px] sm:text-xs">
-                  Swipe right for <strong className="text-indigo-700 font-extrabold">Collaborate</strong> task planner
-                </span>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-2xs shrink-0 flex items-center gap-0.5">
-                <span>Open</span>
-                <span>→</span>
               </span>
             </div>
 

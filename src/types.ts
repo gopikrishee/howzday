@@ -185,7 +185,7 @@ export interface DailyTaskItem {
   title: string;
   completed: boolean;
   priority: TaskPriority;
-  category: TaskCategory;
+  category?: TaskCategory;
   assignedTo?: TaskModifier;
   createdBy: TaskModifier;
   lastModifiedBy: TaskModifier;

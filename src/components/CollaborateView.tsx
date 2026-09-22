@@ -8,7 +8,6 @@ import {
   UserProfile,
   MoodEntry,
   TaskPriority,
-  TaskCategory,
   CollaboratorSummary,
 } from '../types';
 import { getMoodConfig } from '../data/moodConfigs';
@@ -22,9 +21,6 @@ import {
   ArrowLeft,
   Target,
   Shield,
-  Briefcase,
-  Activity,
-  Coffee,
   X,
 } from 'lucide-react';
 import { getTodayDateString } from '../services/storageService';
@@ -41,20 +37,12 @@ interface CollaborateViewProps {
   onGoToCroods?: () => void;
 }
 
-const CATEGORIES: { id: TaskCategory; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: 'Personal', label: 'Personal', icon: <Coffee className="w-3 h-3" />, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { id: 'Work', label: 'Work', icon: <Briefcase className="w-3 h-3" />, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { id: 'Health', label: 'Health', icon: <Activity className="w-3 h-3" />, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { id: 'Crood Sync', label: 'Crood Sync', icon: <Users className="w-3 h-3" />, color: 'bg-purple-50 text-purple-700 border-purple-200' },
-  { id: 'Mindfulness', label: 'Mindfulness', icon: <Sparkles className="w-3 h-3" />, color: 'bg-rose-50 text-rose-700 border-rose-200' },
-];
-
 const QUICK_INSPIRATIONS = [
-  { title: 'Drink 2L water & stay hydrated', category: 'Health' as TaskCategory, priority: 'medium' as TaskPriority },
-  { title: '15-min Crood check-in sync', category: 'Crood Sync' as TaskCategory, priority: 'high' as TaskPriority },
-  { title: 'Complete today’s top focus priority', category: 'Work' as TaskCategory, priority: 'high' as TaskPriority },
-  { title: '10-min mindful breathwork / stretch', category: 'Mindfulness' as TaskCategory, priority: 'low' as TaskPriority },
-  { title: '20-min fresh air evening walk', category: 'Health' as TaskCategory, priority: 'medium' as TaskPriority },
+  { title: 'Drink 2L water & stay hydrated', priority: 'medium' as TaskPriority },
+  { title: '15-min Crood check-in sync', priority: 'high' as TaskPriority },
+  { title: 'Complete today’s top focus priority', priority: 'high' as TaskPriority },
+  { title: '10-min mindful breathwork / stretch', priority: 'low' as TaskPriority },
+  { title: '20-min fresh air evening walk', priority: 'medium' as TaskPriority },
 ];
 
 export const CollaborateView: React.FC<CollaborateViewProps> = ({
@@ -73,7 +61,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   // New task form state
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState<TaskPriority>('medium');
-  const [taskCategory, setTaskCategory] = useState<TaskCategory>('Personal');
   const [taskAssigneeId, setTaskAssigneeId] = useState<string>('all');
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
 
@@ -208,7 +195,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         title: trimmed,
         completed: false,
         priority: taskPriority,
-        category: taskCategory,
         assignedTo: assignedToData,
         createdBy: currentUserModifier,
         lastModifiedBy: currentUserModifier,
@@ -232,9 +218,8 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   };
 
   // Quick add inspiration task
-  const handleQuickAdd = async (item: { title: string; category: TaskCategory; priority: TaskPriority }) => {
+  const handleQuickAdd = async (item: { title: string; priority: TaskPriority }) => {
     setTaskTitle(item.title);
-    setTaskCategory(item.category);
     setTaskPriority(item.priority);
   };
 
@@ -606,57 +591,35 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           </button>
         </div>
 
-        {/* Priority & Category Selectors */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-          {/* Priority options */}
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-slate-400 mr-1">Priority:</span>
-            {(['low', 'medium', 'high'] as TaskPriority[]).map((p) => {
-              const isActive = taskPriority === p;
-              const colorClasses =
-                p === 'high'
-                  ? isActive
-                    ? 'bg-rose-500 text-white border-rose-500'
-                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                  : p === 'medium'
-                  ? isActive
-                    ? 'bg-amber-500 text-white border-amber-500'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                  : isActive
-                  ? 'bg-emerald-500 text-white border-emerald-500'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        {/* Priority Selector */}
+        <div className="flex items-center gap-1 pt-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 mr-1">Priority:</span>
+          {(['low', 'medium', 'high'] as TaskPriority[]).map((p) => {
+            const isActive = taskPriority === p;
+            const colorClasses =
+              p === 'high'
+                ? isActive
+                  ? 'bg-rose-500 text-white border-rose-500'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                : p === 'medium'
+                ? isActive
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                : isActive
+                ? 'bg-emerald-500 text-white border-emerald-500'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200';
 
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setTaskPriority(p)}
-                  className={`px-2 py-0.5 rounded-lg border text-[11px] font-bold capitalize transition-all cursor-pointer ${colorClasses}`}
-                >
-                  {p}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Category Dropdown/Pill */}
-          <div className="flex items-center gap-1 overflow-x-auto">
-            <span className="text-[11px] font-bold text-slate-400 mr-1">Tag:</span>
-            {CATEGORIES.map((cat) => (
+            return (
               <button
-                key={cat.id}
+                key={p}
                 type="button"
-                onClick={() => setTaskCategory(cat.id)}
-                className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer ${
-                  taskCategory === cat.id
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                }`}
+                onClick={() => setTaskPriority(p)}
+                className={`px-2 py-0.5 rounded-lg border text-[11px] font-bold capitalize transition-all cursor-pointer ${colorClasses}`}
               >
-                {cat.label}
+                {p}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
         {/* Optional Assignee if croods are attached */}
@@ -721,7 +684,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         <AnimatePresence mode="popLayout">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => {
-              const catConfig = CATEGORIES.find((c) => c.id === task.category) || CATEGORIES[0];
               const isHighPriority = task.priority === 'high';
               const isMediumPriority = task.priority === 'medium';
 
@@ -758,14 +720,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                     {/* Task Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                        {/* Category Pill */}
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold ${catConfig.color}`}
-                        >
-                          {catConfig.icon}
-                          <span>{task.category}</span>
-                        </span>
-
                         {/* Priority Dot */}
                         <span
                           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
