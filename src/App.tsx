@@ -818,7 +818,7 @@ export default function App() {
         />
 
         {/* Main Content Area based on Active Tab */}
-        <main className="flex-1 px-4 pt-4 pb-28 flex flex-col overflow-y-auto">
+        <main className="flex-1 px-3.5 sm:px-4 pt-3 sm:pt-4 pb-28 flex flex-col overflow-y-auto">
           {activeTab === 'moods' && (
             <MoodsView
               todayFormatted={todayFormatted}

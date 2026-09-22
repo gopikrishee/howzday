@@ -49,7 +49,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
   };
 
   return (
-    <header className={`w-full ${moodTheme?.headerBg || 'bg-white/95'} backdrop-blur-md border-b ${moodTheme?.borderColor || 'border-slate-200/90'} px-4 py-3 sticky top-0 z-20 shadow-2xs transition-colors duration-700`}>
+    <header className={`w-full ${moodTheme?.headerBg || 'bg-white/95'} backdrop-blur-md border-b ${moodTheme?.borderColor || 'border-slate-200/90'} px-3.5 sm:px-4 py-2.5 sm:py-3 sticky top-0 z-20 shadow-2xs transition-colors duration-700`}>
       <div className="max-w-md mx-auto flex items-center justify-between gap-2">
         {/* Left: App title / Brand */}
         <div className="flex items-center gap-2.5">
@@ -102,7 +102,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
           <motion.div
             id="streak-indicator-chip"
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-950 text-xs font-black shadow-2xs"
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[32px] rounded-full bg-amber-50 border border-amber-300 text-amber-950 text-xs font-black shadow-2xs"
           >
             <motion.div
               animate={{ scale: [1, 1.25, 1], rotate: [0, 6, -6, 0] }}
@@ -114,7 +114,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
           </motion.div>
 
           {/* Level Pill */}
-          <div className="hidden xs:flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-300 text-indigo-950 text-xs font-black shadow-2xs">
+          <div className="hidden xs:flex items-center gap-1 px-2.5 py-1 min-h-[32px] rounded-full bg-indigo-50 border border-indigo-300 text-indigo-950 text-xs font-black shadow-2xs">
             <Award className="w-3.5 h-3.5 text-indigo-600" />
             <span>L{stats.level}</span>
           </div>
@@ -124,7 +124,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
             type="button"
             id="open-history-btn"
             onClick={onOpenHistory}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer shadow-2xs border border-slate-200/80"
+            className="w-9 h-9 min-h-[36px] rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer shadow-2xs border border-slate-200/80"
             aria-label="View Mood History"
             title="Past check-in log history"
           >
@@ -138,7 +138,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
               id="user-auth-btn"
               onClick={onSignOut}
               title={`Signed in as ${user.displayName || user.email || 'User'}. Click to sign out.`}
-              className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-xs text-slate-800 font-semibold border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 min-h-[36px] rounded-full bg-slate-100 hover:bg-slate-200 text-xs text-slate-800 font-semibold border border-slate-200 transition-colors cursor-pointer shadow-2xs"
             >
               {user.photoURL ? (
                 <img
@@ -159,7 +159,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
               type="button"
               id="google-signin-header-btn"
               onClick={onSignIn}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-1 px-3.5 py-1.5 min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
               title="Sign in with Google to sync with Firestore"
             >
               <LogIn className="w-3.5 h-3.5" />

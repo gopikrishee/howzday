@@ -45,7 +45,7 @@ export const MoodCard: React.FC<MoodCardProps> = ({
         y: isSelected ? -4 : 0,
       }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-      className={`relative flex-1 min-w-0 p-2.5 sm:p-3.5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 text-left flex flex-col items-center text-center cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+      className={`relative flex-1 min-w-0 p-2 sm:p-3.5 min-h-[105px] sm:min-h-[120px] rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 text-left flex flex-col items-center justify-between text-center cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
         isSelected
           ? `${config.bgLight} ${config.borderColor} shadow-lg ring-2 ring-offset-1`
           : isLocked && !isTodayRecorded
@@ -65,7 +65,7 @@ export const MoodCard: React.FC<MoodCardProps> = ({
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="absolute -top-2.5 -right-2 px-2.5 py-0.5 rounded-full flex items-center justify-center text-white shadow-md text-[10px] font-bold tracking-tight whitespace-nowrap z-10"
+          className="absolute -top-2.5 -right-1.5 sm:-right-2 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center justify-center text-white shadow-md text-[10px] font-bold tracking-tight whitespace-nowrap z-10"
           style={{ backgroundColor: config.primaryColor }}
         >
           {isTodayRecorded ? (
@@ -77,18 +77,18 @@ export const MoodCard: React.FC<MoodCardProps> = ({
       )}
 
       {/* Mood Emoji / Avatar */}
-      <div className="my-1 flex items-center justify-center">
+      <div className="my-0.5 sm:my-1 flex items-center justify-center">
         <MoodAvatar
           mood={mood}
           isSelected={isSelected}
-          size={50}
+          size={46}
         />
       </div>
 
       {/* Mood Name */}
-      <div className="mt-1.5 w-full">
+      <div className="mt-1 w-full">
         <span
-          className={`block text-sm sm:text-base font-extrabold tracking-tight ${
+          className={`block text-xs sm:text-sm font-extrabold tracking-tight leading-tight ${
             isSelected
               ? config.textColor
               : isLocked && !isTodayRecorded
@@ -99,7 +99,7 @@ export const MoodCard: React.FC<MoodCardProps> = ({
           {config.label}
         </span>
         <span
-          className={`block text-[11px] sm:text-xs font-semibold mt-0.5 truncate ${
+          className={`block text-[10px] sm:text-xs font-semibold mt-0.5 truncate ${
             isSelected
               ? 'text-slate-800'
               : isLocked && !isTodayRecorded

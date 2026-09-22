@@ -64,7 +64,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
       />
 
       {/* 2. Curated Media & Shopping Discovery (Netflix, YouTube, Amazon India) */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
@@ -95,11 +95,11 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
         </p>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
           <button
             type="button"
             onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+            className={`px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'all'
                 ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/70'
@@ -112,7 +112,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
           <button
             type="button"
             onClick={() => setSelectedCategory('movie')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+            className={`px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'movie'
                 ? 'bg-red-600 text-white border-red-600 shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/70'
@@ -125,7 +125,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
           <button
             type="button"
             onClick={() => setSelectedCategory('song')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+            className={`px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'song'
                 ? 'bg-red-500 text-white border-red-500 shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/70'
@@ -138,7 +138,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
           <button
             type="button"
             onClick={() => setSelectedCategory('video')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+            className={`px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'video'
                 ? 'bg-red-500 text-white border-red-500 shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/70'
@@ -151,7 +151,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
           <button
             type="button"
             onClick={() => setSelectedCategory('podcast')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+            className={`px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'podcast'
                 ? 'bg-red-500 text-white border-red-500 shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/70'
@@ -164,7 +164,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
           <button
             type="button"
             onClick={() => setSelectedCategory('shopping')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+            className={`px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'shopping'
                 ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/70'
@@ -191,7 +191,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
 
         {/* Visual Mood Affirmation Banner */}
         <div
-          className="p-4 sm:p-5 rounded-3xl border shadow-xs relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4"
+          className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl border shadow-xs relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4"
           style={{
             background: `linear-gradient(135deg, ${currentMoodConfig.bgLight} 0%, #FFFFFF 100%)`,
             borderColor: `${currentMoodConfig.primaryColor}30`,
@@ -221,7 +221,7 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
           <button
             type="button"
             onClick={handleCopyAffirmation}
-            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 shrink-0 shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 self-end sm:self-center"
+            className="px-3.5 py-2 min-h-[38px] rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 shrink-0 shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 self-end sm:self-center"
           >
             {isAffirmationCopied ? (
               <>

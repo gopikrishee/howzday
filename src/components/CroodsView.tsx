@@ -52,6 +52,19 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [croodToBanish, setCroodToBanish] = useState<{ requestId: string; name: string } | null>(null);
+  const [isBanishing, setIsBanishing] = useState(false);
+
+  const handleBanishConfirm = async () => {
+    if (!croodToBanish) return;
+    setIsBanishing(true);
+    try {
+      await onRemoveFriend(croodToBanish.requestId);
+    } finally {
+      setIsBanishing(false);
+      setCroodToBanish(null);
+    }
+  };
 
   // Split requests
   const incomingRequests = useMemo(() => {
@@ -243,7 +256,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
         <button
           type="button"
           onClick={() => setSubTab('crood')}
-          className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+          className={`flex-1 py-2.5 min-h-[40px] rounded-lg transition-all cursor-pointer text-center ${
             subTab === 'crood'
               ? 'bg-white text-indigo-600 shadow-2xs font-bold'
               : 'text-slate-600 hover:text-slate-900'
@@ -255,7 +268,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
         <button
           type="button"
           onClick={() => setSubTab('requests')}
-          className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center relative ${
+          className={`flex-1 py-2.5 min-h-[40px] rounded-lg transition-all cursor-pointer text-center relative ${
             subTab === 'requests'
               ? 'bg-white text-indigo-600 shadow-2xs font-bold'
               : 'text-slate-600 hover:text-slate-900'
@@ -272,7 +285,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
         <button
           type="button"
           onClick={() => setSubTab('search')}
-          className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+          className={`flex-1 py-2.5 min-h-[40px] rounded-lg transition-all cursor-pointer text-center ${
             subTab === 'search'
               ? 'bg-white text-indigo-600 shadow-2xs font-bold'
               : 'text-slate-600 hover:text-slate-900'
@@ -374,11 +387,16 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
                       {matchRequest && (
                         <button
                           type="button"
-                          onClick={() => onRemoveFriend(matchRequest.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Remove from Crood"
+                          onClick={() =>
+                            setCroodToBanish({
+                              requestId: matchRequest.id,
+                              name: friend.displayName || 'this member',
+                            })
+                          }
+                          className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Banish from Crood"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       )}
                     </div>
@@ -440,7 +458,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
                         type="button"
                         onClick={() => handleAccept(req.id)}
                         disabled={actionLoading === req.id}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-3.5 py-2 min-h-[38px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5" />
                         <span>Accept</span>
@@ -449,7 +467,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
                         type="button"
                         onClick={() => handleDecline(req.id)}
                         disabled={actionLoading === req.id}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                        className="w-9 h-9 min-h-[38px] flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
                         title="Decline"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -501,13 +519,13 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search friends by name or email..."
-                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs"
+                className="w-full pl-9 pr-9 py-2.5 min-h-[44px] rounded-xl border border-slate-200 bg-white text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={handleClearSearch}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 text-xs cursor-pointer"
+                  className="w-7 h-7 flex items-center justify-center absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer rounded-full hover:bg-slate-100"
                   aria-label="Clear search"
                 >
                   ✕
@@ -517,7 +535,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
             <button
               type="submit"
               disabled={!searchQuery.trim()}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:cursor-not-allowed shrink-0"
+              className="px-4 py-2.5 min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:cursor-not-allowed shrink-0"
             >
               <Search className="w-3.5 h-3.5" />
               <span>Search</span>
@@ -611,7 +629,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setSubTab('requests')}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3.5 py-2 min-h-[38px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors cursor-pointer"
                         >
                           <span>Respond</span>
                         </button>
@@ -620,7 +638,7 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
                           type="button"
                           onClick={() => handleSend(target)}
                           disabled={isLoading}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
                         >
                           <UserPlus className="w-3.5 h-3.5" />
                           <span>{isLoading ? 'Adding...' : 'Add'}</span>
@@ -634,6 +652,61 @@ export const CroodsView: React.FC<CroodsViewProps> = ({
           </div>
         </div>
       )}
+      {/* Banish Crood Confirmation Modal */}
+      <AnimatePresence>
+        {croodToBanish && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+            onClick={() => {
+              if (!isBanishing) setCroodToBanish(null);
+            }}
+          >
+            <motion.div
+              id="banish-crood-modal"
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 12 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col p-5 sm:p-6 text-center"
+            >
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3.5 border border-rose-100 shadow-2xs">
+                <Trash2 className="w-7 h-7 stroke-[2]" />
+              </div>
+
+              <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                Are you sure you want to banish the crood?
+              </h3>
+
+              {croodToBanish.name && (
+                <p className="text-xs text-slate-500 font-medium mt-1.5">
+                  <span className="font-bold text-slate-700">{croodToBanish.name}</span> will be removed from your Crood squad.
+                </p>
+              )}
+
+              <div className="flex items-center gap-2.5 mt-5">
+                <button
+                  type="button"
+                  id="banish-crood-no-btn"
+                  disabled={isBanishing}
+                  onClick={() => setCroodToBanish(null)}
+                  className="flex-1 py-3 px-4 min-h-[44px] rounded-xl border border-slate-200 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs"
+                >
+                  No
+                </button>
+                <button
+                  type="button"
+                  id="banish-crood-confirm-btn"
+                  disabled={isBanishing}
+                  onClick={handleBanishConfirm}
+                  className="flex-1 py-3 px-4 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md disabled:opacity-60 flex items-center justify-center gap-1.5"
+                >
+                  {isBanishing ? <span>Banishing...</span> : <span>Banish</span>}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

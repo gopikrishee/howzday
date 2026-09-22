@@ -180,7 +180,7 @@ export const MoodRecommendationCard: React.FC<MoodRecommendationCardProps> = ({
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 cursor-pointer ${getActionThemeStyle()}`}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 cursor-pointer ${getActionThemeStyle()}`}
           >
             <span>{getActionLabel()}</span>
             <ExternalLink className="w-3.5 h-3.5" />

@@ -148,7 +148,7 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
   return (
     <div
       id="weekly-mood-summary-card"
-      className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4 relative overflow-hidden transition-all duration-300"
+      className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4 relative overflow-hidden transition-all duration-300"
     >
       {/* Decorative ambient background blur */}
       {dominantMoodItem && (
@@ -314,7 +314,7 @@ export const WeeklyMoodSummaryCard: React.FC<WeeklyMoodSummaryCardProps> = ({
                     type="button"
                     onMouseEnter={() => setHoveredMood(item.mood)}
                     onMouseLeave={() => setHoveredMood(null)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 min-h-[32px] rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
                       isHovered
                         ? 'scale-105 shadow-xs bg-white'
                         : 'bg-slate-50/80 hover:bg-white text-slate-700 border-slate-200/80'
