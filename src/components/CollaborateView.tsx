@@ -15,11 +15,9 @@ import {
   Check,
   Plus,
   Trash2,
-  Sparkles,
   ArrowLeft,
   Target,
   User as UserIcon,
-  Calendar,
 } from 'lucide-react';
 import { getTodayDateString } from '../services/storageService';
 
@@ -379,7 +377,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   // Progress metrics
   const totalTasksCount = activePlan?.tasks.length || 0;
   const completedTasksCount = activePlan?.tasks.filter((t) => t.completed).length || 0;
-  const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
   // Filtered tasks
   const filteredTasks = useMemo(() => {
@@ -408,60 +405,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         <div className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-full border border-slate-200/90 shadow-2xs text-[11px] font-bold text-slate-600">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Live Collab</span>
-        </div>
-      </div>
-
-      {/* Main Collaborate Hero Card */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/40 border border-indigo-100/80 shadow-2xs space-y-3.5 relative overflow-hidden">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600 fill-indigo-600/30" />
-              <span>Collaborative Planner</span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-tight truncate">
-              {activePlan?.title || 'Focus & Goals Planner'}
-            </h2>
-            <p className="text-xs text-slate-600 mt-0.5">
-              Co-plan and assign focus goals together. Assigned tasks appear live on your Crood’s planner.
-            </p>
-          </div>
-
-          {/* Progress Badge */}
-          {totalTasksCount > 0 && (
-            <div className="shrink-0 flex flex-col items-end">
-              <span className="text-xs font-black text-indigo-700">
-                {completedTasksCount}/{totalTasksCount} Done
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium">
-                {progressPercent}% completed
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Progress Bar */}
-        {totalTasksCount > 0 && (
-          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200/60">
-            <motion.div
-              className={`h-full rounded-full ${
-                progressPercent === 100
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                  : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600'
-              }`}
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-            />
-          </div>
-        )}
-
-        {/* Plan meta bar */}
-        <div className="pt-2 border-t border-slate-100/90 flex items-center justify-between gap-2 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span>{activePlan?.date || getTodayDateString()}</span>
-          </div>
         </div>
       </div>
 
