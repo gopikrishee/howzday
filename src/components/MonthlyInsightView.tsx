@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { MoodEntry, GamificationStats, MoodLevel } from '../types';
+import { MoodEntry, GamificationStats } from '../types';
 import { getMoodConfig } from '../data/moodConfigs';
 import {
   getRecommendationsForMood,
-  RecommendationCategory,
 } from '../data/moodRecommendations';
 import { MoodRecommendationCard } from './MoodRecommendationCard';
+import { WeeklyMoodSummaryCard } from './WeeklyMoodSummaryCard';
 import {
   Sparkles,
   Copy,
@@ -32,25 +32,17 @@ type RecommendationFilter = 'all' | 'movie' | 'song' | 'video' | 'podcast' | 'sh
 
 export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
   entries,
+  onNavigateToMoods,
 }) => {
   const latestEntry = entries.length > 0 ? entries[0] : null;
-  const [activeMood, setActiveMood] = useState<MoodLevel>(
-    latestEntry ? latestEntry.mood : 'happy'
-  );
+  const currentMood = latestEntry ? latestEntry.mood : 'happy';
 
   const [selectedCategory, setSelectedCategory] = useState<RecommendationFilter>('all');
   const [isAffirmationCopied, setIsAffirmationCopied] = useState<boolean>(false);
 
-  // Sync active mood when entries change
-  useEffect(() => {
-    if (entries.length > 0) {
-      setActiveMood(entries[0].mood);
-    }
-  }, [entries]);
-
-  // Get curated recommendations for the active mood
-  const recommendationSet = getRecommendationsForMood(activeMood);
-  const activeMoodConfig = getMoodConfig(activeMood);
+  // Get curated recommendations for the current mood
+  const recommendationSet = getRecommendationsForMood(currentMood);
+  const currentMoodConfig = getMoodConfig(currentMood);
 
   const filteredRecommendations = recommendationSet.items.filter((item) => {
     if (selectedCategory === 'all') return true;
@@ -64,8 +56,14 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
   };
 
   return (
-    <div id="monthly-insight-screen" className="flex flex-col space-y-5 pb-6">
-      {/* Curated Media & Shopping Discovery (Netflix, YouTube, Amazon India) */}
+    <div id="monthly-insight-screen" className="flex flex-col space-y-4 pb-6">
+      {/* 1. Weekly Mood Summary Card */}
+      <WeeklyMoodSummaryCard
+        entries={entries}
+        onNavigateToMoods={onNavigateToMoods}
+      />
+
+      {/* 2. Curated Media & Shopping Discovery (Netflix, YouTube, Amazon India) */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -77,15 +75,15 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mt-0.5">
               <span>Recommendations for</span>
               <span
-                className="px-2.5 py-0.5 rounded-xl border text-sm font-black flex items-center gap-1.5"
+                className="px-2.5 py-0.5 rounded-xl border text-sm font-black flex items-center gap-1.5 transition-colors"
                 style={{
-                  backgroundColor: `${activeMoodConfig.primaryColor}15`,
-                  color: activeMoodConfig.primaryColor,
-                  borderColor: `${activeMoodConfig.primaryColor}30`,
+                  backgroundColor: `${currentMoodConfig.primaryColor}15`,
+                  color: currentMoodConfig.primaryColor,
+                  borderColor: `${currentMoodConfig.primaryColor}30`,
                 }}
               >
-                <span>{activeMoodConfig.emoji}</span>
-                <span>{activeMoodConfig.label}</span>
+                <span>{currentMoodConfig.emoji}</span>
+                <span>{currentMoodConfig.label}</span>
               </span>
             </h3>
           </div>
@@ -184,8 +182,8 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
               <MoodRecommendationCard
                 key={item.id}
                 item={item}
-                moodEmoji={activeMoodConfig.emoji}
-                themeColor={activeMoodConfig.primaryColor}
+                moodEmoji={currentMoodConfig.emoji}
+                themeColor={currentMoodConfig.primaryColor}
               />
             ))}
           </AnimatePresence>
@@ -195,17 +193,17 @@ export const MonthlyInsightView: React.FC<MonthlyInsightViewProps> = ({
         <div
           className="p-4 sm:p-5 rounded-3xl border shadow-xs relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4"
           style={{
-            background: `linear-gradient(135deg, ${activeMoodConfig.bgLight} 0%, #FFFFFF 100%)`,
-            borderColor: `${activeMoodConfig.primaryColor}30`,
+            background: `linear-gradient(135deg, ${currentMoodConfig.bgLight} 0%, #FFFFFF 100%)`,
+            borderColor: `${currentMoodConfig.primaryColor}30`,
           }}
         >
           <div className="flex items-start gap-3">
             <div
               className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs border mt-0.5"
               style={{
-                backgroundColor: `${activeMoodConfig.primaryColor}20`,
-                borderColor: `${activeMoodConfig.primaryColor}40`,
-                color: activeMoodConfig.primaryColor,
+                backgroundColor: `${currentMoodConfig.primaryColor}20`,
+                borderColor: `${currentMoodConfig.primaryColor}40`,
+                color: currentMoodConfig.primaryColor,
               }}
             >
               <Quote className="w-4 h-4" />
