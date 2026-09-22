@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Suppress benign [vite] websocket connection messages in sandboxed container preview
+      (function() {
+        function shouldSuppress(arg) {
+          if (!arg) return false;
+          var str = typeof arg === 'string' ? arg : (arg.message || String(arg));
+          return str.indexOf('[vite]') !== -1 || str.indexOf('failed to connect to websocket') !== -1;
+        }
+
+        var origError = console.error;
+        console.error = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (shouldSuppress(arguments[i])) return;
+          }
+          origError.apply(console, arguments);
+        };
+
+        var origWarn = console.warn;
+        console.warn = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (shouldSuppress(arguments[i])) return;
+          }
+          origWarn.apply(console, arguments);
+        };
+
+        var origLog = console.log;
+        console.log = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (shouldSuppress(arguments[i])) return;
+          }
+          origLog.apply(console, arguments);
+        };
+
+        var origDebug = console.debug;
+        console.debug = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (shouldSuppress(arguments[i])) return;
+          }
+          origDebug.apply(console, arguments);
+        };
+
+        // Suppress window error events related to vite websocket
+        window.addEventListener('error', function(e) {
+          if (shouldSuppress(e.message) || shouldSuppress(e.filename)) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>HowZDay</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="description" content="HowZDay - A mindful daily mood check-in and emotional wellness app with Crood circles and friend status feeds." />
+    <meta name="theme-color" content="#f97316" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="HowZDay" />
+    
+    <meta property="og:title" content="HowZDay" />
+    <meta property="og:description" content="HowZDay - A mindful daily mood check-in and emotional wellness app with Crood circles and friend status feeds." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="./assets/index-C4wO5EZS.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Dpziva1Q.css">
+  <link rel="manifest" href="./manifest.webmanifest"></head>
+  <body class="overflow-x-hidden antialiased select-none">
+    <div id="root"></div>
+  </body>
+</html>
