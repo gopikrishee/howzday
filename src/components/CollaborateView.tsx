@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { User } from 'firebase/auth';
@@ -9,6 +9,7 @@ import {
   MoodEntry,
   TaskPriority,
   CollaboratorSummary,
+  TaskModifier,
 } from '../types';
 import { getMoodConfig } from '../data/moodConfigs';
 import {
@@ -17,7 +18,10 @@ import {
   Trash2,
   ArrowLeft,
   Target,
-  User as UserIcon,
+  Users,
+  Search,
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import { getTodayDateString } from '../services/storageService';
 
@@ -33,14 +37,6 @@ interface CollaborateViewProps {
   onGoToCroods?: () => void;
 }
 
-const QUICK_INSPIRATIONS = [
-  { title: 'Drink 2L water & stay hydrated', priority: 'medium' as TaskPriority },
-  { title: '15-min Crood check-in sync', priority: 'high' as TaskPriority },
-  { title: 'Complete today’s top focus priority', priority: 'high' as TaskPriority },
-  { title: '10-min mindful breathwork / stretch', priority: 'low' as TaskPriority },
-  { title: '20-min fresh air evening walk', priority: 'medium' as TaskPriority },
-];
-
 export const CollaborateView: React.FC<CollaborateViewProps> = ({
   user,
   croodFriends,
@@ -54,11 +50,41 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   // New task form state
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState<TaskPriority>('medium');
-  const [taskAssigneeId, setTaskAssigneeId] = useState<string>('all');
+  const [selectedCollabUids, setSelectedCollabUids] = useState<string[]>(() =>
+    user ? [user.uid] : ['guest']
+  );
+  const [isCollabDropdownOpen, setIsCollabDropdownOpen] = useState(false);
+  const [collabSearchQuery, setCollabSearchQuery] = useState('');
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const collabDropdownRef = useRef<HTMLDivElement>(null);
 
   // Filter tasks tab
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
+
+  // Sync selectedCollabUids default when user changes
+  useEffect(() => {
+    if (user?.uid) {
+      setSelectedCollabUids((prev) => (prev.length === 0 ? [user.uid] : prev));
+    }
+  }, [user]);
+
+  // Click-outside listener for Collab multi-select dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        collabDropdownRef.current &&
+        !collabDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCollabDropdownOpen(false);
+      }
+    };
+    if (isCollabDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCollabDropdownOpen]);
 
   // Current selected planner or fallback to first available
   const currentPlanner = useMemo(() => {
@@ -76,11 +102,66 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
     }
   }, [planners, activePlannerId]);
 
+  // Collab selectable options (Myself + Crood friends)
+  const availableCollabs = useMemo(() => {
+    const currentUid = user?.uid || 'guest';
+    const currentName = user?.displayName || user?.email?.split('@')[0] || 'Myself';
+    const currentPhoto = user?.photoURL || undefined;
+
+    const meOption = {
+      uid: currentUid,
+      displayName: currentName,
+      email: user?.email || '',
+      photoURL: currentPhoto,
+      isMe: true,
+    };
+
+    const friendOptions = croodFriends.map((f) => ({
+      uid: f.userId,
+      displayName: f.displayName || 'Crood Friend',
+      email: f.email,
+      photoURL: f.photoURL,
+      isMe: false,
+    }));
+
+    return [meOption, ...friendOptions];
+  }, [user, croodFriends]);
+
+  // Filtered collab options for search
+  const filteredCollabOptions = useMemo(() => {
+    const query = collabSearchQuery.trim().toLowerCase();
+    if (!query) return availableCollabs;
+    return availableCollabs.filter(
+      (opt) =>
+        opt.displayName.toLowerCase().includes(query) ||
+        (opt.email && opt.email.toLowerCase().includes(query))
+    );
+  }, [availableCollabs, collabSearchQuery]);
+
+  // Toggle selection of a collab member
+  const toggleCollabSelection = (uid: string) => {
+    setSelectedCollabUids((prev) =>
+      prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]
+    );
+  };
+
+  // Button summary text
+  const collabSummaryText = useMemo(() => {
+    if (selectedCollabUids.length === 0) return 'Select Collab';
+    const names = selectedCollabUids.map((uid) => {
+      const opt = availableCollabs.find((o) => o.uid === uid);
+      if (!opt) return 'Crood';
+      return opt.isMe ? 'Myself' : opt.displayName.split(' ')[0];
+    });
+    if (names.length <= 2) return names.join(', ');
+    return `${names[0]}, ${names[1]} +${names.length - 2}`;
+  }, [selectedCollabUids, availableCollabs]);
+
   // Helper to sync collaborators and attached Croods onto the planner
   const syncPlannerCollaborators = (
     planner: DailyPlanner,
     tasks: DailyTaskItem[],
-    newAssigneeId?: string
+    newCollabUids?: string[]
   ): {
     collaboratorIds: string[];
     attachedCroodIds: string[];
@@ -95,13 +176,20 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
     });
 
     tasks.forEach((t) => {
-      if (t.assignedTo?.uid && t.assignedTo.uid !== 'all' && t.assignedTo.uid !== 'guest') {
+      if (t.assignedTo?.uid && t.assignedTo.uid !== 'guest') {
         allUids.add(t.assignedTo.uid);
+      }
+      if (t.collabWith && Array.isArray(t.collabWith)) {
+        t.collabWith.forEach((c) => {
+          if (c.uid && c.uid !== 'guest') allUids.add(c.uid);
+        });
       }
     });
 
-    if (newAssigneeId && newAssigneeId !== 'all' && newAssigneeId !== 'guest') {
-      allUids.add(newAssigneeId);
+    if (newCollabUids && Array.isArray(newCollabUids)) {
+      newCollabUids.forEach((id) => {
+        if (id && id !== 'guest') allUids.add(id);
+      });
     }
 
     const collaboratorIds = Array.from(allUids);
@@ -183,28 +271,30 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         photoURL: user?.photoURL || undefined,
       };
 
-      let assignedToData: { uid: string; displayName: string; photoURL?: string } | undefined;
-      if (taskAssigneeId !== 'all') {
-        if (taskAssigneeId === user?.uid) {
-          assignedToData = currentUserModifier;
-        } else {
-          const friend = croodFriends.find((f) => f.userId === taskAssigneeId);
-          if (friend) {
-            assignedToData = {
-              uid: friend.userId,
-              displayName: friend.displayName || 'Crood Friend',
-              photoURL: friend.photoURL,
-            };
-          }
+      // Construct collabWith from selectedCollabUids
+      const collabWithModifiers: TaskModifier[] = selectedCollabUids.map((uid) => {
+        if (uid === (user?.uid || 'guest')) {
+          return currentUserModifier;
         }
-      }
+        const friend = croodFriends.find((f) => f.userId === uid);
+        return {
+          uid,
+          displayName: friend?.displayName || 'Crood Friend',
+          photoURL: friend?.photoURL,
+        };
+      });
+
+      // Default to currentUserModifier if nothing selected
+      const finalCollabWith =
+        collabWithModifiers.length > 0 ? collabWithModifiers : [currentUserModifier];
 
       const newTask: DailyTaskItem = {
         id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         title: trimmed,
         completed: false,
         priority: taskPriority,
-        assignedTo: assignedToData,
+        assignedTo: finalCollabWith[0], // for backward compatibility
+        collabWith: finalCollabWith,
         createdBy: currentUserModifier,
         lastModifiedBy: currentUserModifier,
         lastModifiedAt: new Date().toISOString(),
@@ -216,7 +306,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
       const { collaboratorIds, attachedCroodIds, collaborators } = syncPlannerCollaborators(
         targetPlan,
         newTasks,
-        taskAssigneeId !== 'all' ? taskAssigneeId : undefined
+        finalCollabWith.map((c) => c.uid)
       );
 
       const updatedPlan: DailyPlanner = {
@@ -231,15 +321,11 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
       await onSavePlanner(updatedPlan);
       setActivePlannerId(updatedPlan.id);
       setTaskTitle('');
+      setCollabSearchQuery('');
+      setIsCollabDropdownOpen(false);
     } finally {
       setIsSubmittingTask(false);
     }
-  };
-
-  // Quick add inspiration task
-  const handleQuickAdd = async (item: { title: string; priority: TaskPriority }) => {
-    setTaskTitle(item.title);
-    setTaskPriority(item.priority);
   };
 
   // Toggle task complete
@@ -434,26 +520,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         </div>
       )}
 
-      {/* Quick Inspiration Chips */}
-      <div className="space-y-1.5">
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-          Quick Inspirations
-        </span>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {QUICK_INSPIRATIONS.map((insp, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleQuickAdd(insp)}
-              className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/90 text-[11px] font-medium text-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
-            >
-              <Plus className="w-3 h-3 text-indigo-600" />
-              <span>{insp.title}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Add New Task Form */}
       <form
         onSubmit={handleAddTask}
@@ -479,7 +545,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           </button>
         </div>
 
-        {/* Priority & Assignee Selectors */}
+        {/* Priority & Collab Multi-select */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
           {/* Priority pills */}
           <div className="flex items-center gap-1.5">
@@ -493,7 +559,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                     : 'bg-rose-50 text-rose-700 border-rose-200'
                   : p === 'medium'
                   ? isActive
-                    ? 'bg-amber-500 text-white border-amber-500'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
                   : isActive
                   ? 'bg-emerald-500 text-white border-emerald-500'
@@ -512,25 +578,134 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
             })}
           </div>
 
-          {/* Assign to Crood selector */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-              <UserIcon className="w-3 h-3 text-slate-400" />
-              <span>Assign to:</span>
-            </span>
-            <select
-              value={taskAssigneeId}
-              onChange={(e) => setTaskAssigneeId(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
-            >
-              <option value="all">Everyone / Shared</option>
-              <option value={user?.uid || 'guest'}>Myself</option>
-              {croodFriends.map((friend) => (
-                <option key={friend.userId} value={friend.userId}>
-                  {friend.displayName}
-                </option>
-              ))}
-            </select>
+          {/* Searchable Multi-Select Collab Dropdown */}
+          <div className="relative" ref={collabDropdownRef}>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                <Users className="w-3 h-3 text-slate-400" />
+                <span>Collab:</span>
+              </span>
+
+              <button
+                type="button"
+                id="collab-select-trigger"
+                onClick={() => setIsCollabDropdownOpen((prev) => !prev)}
+                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-bold text-xs flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer max-w-[200px]"
+                title="Select collaborators"
+              >
+                <span className="truncate">{collabSummaryText}</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${
+                    isCollabDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Dropdown Popover */}
+            {isCollabDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-30 space-y-2">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={collabSearchQuery}
+                    onChange={(e) => setCollabSearchQuery(e.target.value)}
+                    placeholder="Search croods..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                    autoFocus
+                  />
+                  {collabSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setCollabSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Options List */}
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                  {filteredCollabOptions.length > 0 ? (
+                    filteredCollabOptions.map((opt) => {
+                      const isSelected = selectedCollabUids.includes(opt.uid);
+                      return (
+                        <button
+                          key={opt.uid}
+                          type="button"
+                          onClick={() => toggleCollabSelection(opt.uid)}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-50 text-indigo-900 font-bold'
+                              : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div
+                              className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all shrink-0 ${
+                                isSelected
+                                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+
+                            {opt.photoURL ? (
+                              <img
+                                src={opt.photoURL}
+                                alt={opt.displayName}
+                                className="w-5 h-5 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                {opt.displayName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+
+                            <span className="truncate">
+                              {opt.displayName} {opt.isMe && '(You)'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="py-3 text-center text-xs text-slate-400">
+                      No matching croods found
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Controls */}
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>{selectedCollabUids.length} selected</span>
+                  <div className="flex items-center gap-2.5">
+                    {selectedCollabUids.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCollabUids([])}
+                        className="text-slate-500 hover:text-slate-700 font-medium cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedCollabUids(availableCollabs.map((o) => o.uid))
+                      }
+                      className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </form>
@@ -579,8 +754,22 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         <AnimatePresence mode="popLayout">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => {
-              const isAssignedToCurrentUser =
-                user && task.assignedTo && task.assignedTo.uid === user.uid;
+              // Extract all collaborators assigned to this task
+              const taskCollabs: TaskModifier[] =
+                task.collabWith && task.collabWith.length > 0
+                  ? task.collabWith
+                  : task.assignedTo
+                  ? [task.assignedTo]
+                  : [];
+
+              const isCollabWithCurrentUser = taskCollabs.some(
+                (c) => c.uid === (user?.uid || 'guest')
+              );
+
+              const collabDisplayNames = taskCollabs
+                .map((c) => (c.uid === (user?.uid || 'guest') ? 'You' : c.displayName))
+                .join(', ');
+
               const hasCheers = task.cheers && task.cheers.length > 0;
               const hasUserCheered = task.cheers?.some(
                 (c) => c.uid === (user?.uid || 'guest')
@@ -642,26 +831,24 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                         </span>
                       </div>
 
-                      {/* Meta Information Footer (Assignee, Modifier, Cheers) */}
+                      {/* Meta Information Footer (Collab With, Modifier, Cheers) */}
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500">
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* Assignee Badge */}
-                          {task.assignedTo ? (
+                          {/* Collab with Badge */}
+                          {taskCollabs.length > 0 ? (
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] border ${
-                                isAssignedToCurrentUser
+                                isCollabWithCurrentUser
                                   ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                   : 'bg-slate-100 text-slate-700 border-slate-200'
                               }`}
                             >
-                              <UserIcon className="w-2.5 h-2.5" />
-                              <span>
-                                {isAssignedToCurrentUser ? 'Assigned to You' : `Assigned: ${task.assignedTo.displayName}`}
-                              </span>
+                              <Users className="w-2.5 h-2.5" />
+                              <span>Collab with: {collabDisplayNames}</span>
                             </span>
                           ) : (
                             <span className="text-[10px] text-slate-400">
-                              Shared
+                              Open Collab
                             </span>
                           )}
 
@@ -717,7 +904,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
               </div>
               <h3 className="text-sm font-bold text-slate-800">No tasks planned yet</h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Add focus goals above and assign them to yourself or any of your Croods to co-plan live.
+                Add focus goals above and choose Collab members to co-plan live.
               </p>
             </div>
           )}

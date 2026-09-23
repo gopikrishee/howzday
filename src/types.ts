@@ -187,6 +187,7 @@ export interface DailyTaskItem {
   priority: TaskPriority;
   category?: TaskCategory;
   assignedTo?: TaskModifier;
+  collabWith?: TaskModifier[];
   createdBy: TaskModifier;
   lastModifiedBy: TaskModifier;
   lastModifiedAt: string; // ISO date string
