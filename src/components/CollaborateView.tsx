@@ -442,35 +442,35 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   const activeMoodConfig = todayMoodEntry ? getMoodConfig(todayMoodEntry.mood) : null;
 
   return (
-    <div id="collaborate-panel" className="flex-1 flex flex-col relative space-y-4">
+    <div id="collaborate-panel" className="flex-1 flex flex-col relative space-y-4 sm:space-y-5 pb-8 sm:pb-10">
       {/* Top Header with Back Navigation and Live Collab Indicator */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2.5">
         <button
           type="button"
           onClick={onBackToMoods}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200/90 shadow-2xs transition-all cursor-pointer min-h-[34px] active:scale-95"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200/90 shadow-2xs transition-all cursor-pointer min-h-[40px] active:scale-95 touch-manipulation"
           title="Return to Mood Pulse view"
         >
-          <ArrowLeft className="w-3.5 h-3.5 text-indigo-600" />
+          <ArrowLeft className="w-4 h-4 text-indigo-600" />
           <span>Mood Pulse</span>
         </button>
 
-        <div className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-full border border-slate-200/90 shadow-2xs text-[11px] font-bold text-slate-600">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-xs px-3.5 py-2 rounded-full border border-slate-200/90 shadow-2xs text-xs font-bold text-slate-600 min-h-[40px]">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>Live Collab</span>
         </div>
       </div>
 
       {/* Mood & Focus Synergy Card */}
       {todayMoodEntry && activeMoodConfig && (
-        <div className="p-3 rounded-2xl bg-white/80 border border-slate-200/80 flex items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-2xl shrink-0">{activeMoodConfig.emoji}</span>
+        <div className="p-3.5 sm:p-4.5 rounded-3xl bg-white/90 border border-slate-200/80 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-2xl sm:text-3xl shrink-0">{activeMoodConfig.emoji}</span>
             <div className="min-w-0">
-              <span className="text-xs font-bold text-slate-800 block truncate">
+              <span className="text-xs sm:text-sm font-bold text-slate-800 block truncate">
                 Today’s Pulse: {activeMoodConfig.label}
               </span>
-              <span className="text-[10px] text-slate-500 block truncate">
+              <span className="text-xs text-slate-500 block truncate leading-relaxed">
                 {todayMoodEntry.mood === 'happy'
                   ? 'High energy day — fantastic for tackling major focus tasks!'
                   : todayMoodEntry.mood === 'tired' || todayMoodEntry.mood === 'sleepy'
@@ -481,7 +481,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
               </span>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0 border border-slate-200">
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 shrink-0 border border-slate-200">
             Synergy
           </span>
         </div>
@@ -490,54 +490,54 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
       {/* Add New Task Form */}
       <form
         onSubmit={handleAddTask}
-        className="p-3.5 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3"
+        className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3.5"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           <input
             type="text"
             id="new-task-input"
             value={taskTitle}
             onChange={(e) => setTaskTitle(e.target.value)}
             placeholder="Add a task or focus goal..."
-            className="flex-1 min-h-[42px] px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+            className="flex-1 min-h-[46px] px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm sm:text-base text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
           />
           <button
             type="submit"
             id="submit-task-btn"
             disabled={!taskTitle.trim() || isSubmittingTask}
-            className="px-4 py-2 min-h-[42px] rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+            className="px-4.5 sm:px-5 py-2.5 min-h-[46px] rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0 touch-manipulation"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Add</span>
           </button>
         </div>
 
-        {/* Priority & Collab Controls with stable layout */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-1">
+        {/* Priority & Collab Controls with stable, spacious responsive layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
           {/* Priority pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-bold text-slate-500 mr-1">Priority:</span>
+            <span className="text-xs font-bold text-slate-500 mr-1 shrink-0">Priority:</span>
             {(['low', 'medium', 'high'] as TaskPriority[]).map((p) => {
               const isActive = taskPriority === p;
               const colorClasses =
                 p === 'high'
                   ? isActive
-                    ? 'bg-rose-500 text-white border-rose-500'
-                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-2xs'
+                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/70'
                   : p === 'medium'
                   ? isActive
-                    ? 'bg-amber-500 text-white border-amber-500'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/70'
                   : isActive
-                  ? 'bg-emerald-500 text-white border-emerald-500'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-2xs'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/70';
 
               return (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setTaskPriority(p)}
-                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold capitalize transition-all cursor-pointer ${colorClasses}`}
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-xl border text-xs font-bold capitalize transition-all cursor-pointer touch-manipulation active:scale-95 ${colorClasses}`}
                 >
                   {p}
                 </button>
@@ -546,9 +546,9 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           </div>
 
           {/* Searchable Multi-Select Collab (Croods only, Myself is default) */}
-          <div className="flex items-center justify-between sm:justify-end gap-1.5">
-            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0">
-              <Users className="w-3 h-3 text-slate-400" />
+          <div className="flex items-center justify-between sm:justify-end gap-2">
+            <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 shrink-0">
+              <Users className="w-3.5 h-3.5 text-slate-400" />
               <span>Collab:</span>
             </span>
 
@@ -557,12 +557,12 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                 type="button"
                 id="collab-select-trigger"
                 onClick={() => setIsCollabDropdownOpen((prev) => !prev)}
-                className="w-36 sm:w-40 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-bold text-xs flex items-center justify-between gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer shrink-0"
+                className="min-h-[38px] w-40 sm:w-44 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-between gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer shrink-0 touch-manipulation active:scale-95"
                 title="Select Croods to collaborate with"
               >
                 <span className="truncate text-left">{collabSummaryText}</span>
                 <ChevronDown
-                  className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${
+                  className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${
                     isCollabDropdownOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -570,33 +570,33 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
 
               {/* Dropdown Popover positioned safely on all screens */}
               {isCollabDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-72 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-40 space-y-2">
+                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-40 space-y-2.5">
                   {croodFriends.length > 0 ? (
                     <>
                       {/* Search Input */}
                       <div className="relative">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
                           value={collabSearchQuery}
                           onChange={(e) => setCollabSearchQuery(e.target.value)}
                           placeholder="Search croods..."
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          className="w-full min-h-[40px] bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                           autoFocus
                         />
                         {collabSearchQuery && (
                           <button
                             type="button"
                             onClick={() => setCollabSearchQuery('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
 
                       {/* Options List */}
-                      <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                      <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
                         {filteredFriends.length > 0 ? (
                           filteredFriends.map((friend) => {
                             const isSelected = selectedFriendUids.includes(friend.userId);
@@ -605,36 +605,36 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                                 key={friend.userId}
                                 type="button"
                                 onClick={() => toggleFriendSelection(friend.userId)}
-                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                                className={`w-full min-h-[42px] flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm transition-colors cursor-pointer touch-manipulation ${
                                   isSelected
                                     ? 'bg-indigo-50 text-indigo-900 font-bold'
                                     : 'hover:bg-slate-50 text-slate-700'
                                 }`}
                               >
-                                <div className="flex items-center gap-2 min-w-0">
+                                <div className="flex items-center gap-2.5 min-w-0">
                                   <div
-                                    className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all shrink-0 ${
+                                    className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all shrink-0 ${
                                       isSelected
                                         ? 'bg-indigo-600 border-indigo-600 text-white'
                                         : 'border-slate-300 bg-white'
                                     }`}
                                   >
-                                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                    {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                   </div>
 
                                   {friend.photoURL ? (
                                     <img
                                       src={friend.photoURL}
                                       alt={friend.displayName}
-                                      className="w-5 h-5 rounded-full object-cover shrink-0"
+                                      className="w-6 h-6 rounded-full object-cover shrink-0"
                                     />
                                   ) : (
-                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
                                       {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'C'}
                                     </div>
                                   )}
 
-                                  <span className="truncate">
+                                  <span className="truncate text-left">
                                     {friend.displayName || 'Crood Friend'}
                                   </span>
                                 </div>
@@ -642,25 +642,25 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                             );
                           })
                         ) : (
-                          <div className="py-3 text-center text-xs text-slate-400">
+                          <div className="py-4 text-center text-xs text-slate-400">
                             No matching croods found
                           </div>
                         )}
                       </div>
 
                       {/* Footer Controls */}
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>
+                      <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span className="font-medium">
                           {selectedFriendUids.length === 0
                             ? 'Only You'
                             : `${selectedFriendUids.length} selected (+You)`}
                         </span>
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-3">
                           {selectedFriendUids.length > 0 && (
                             <button
                               type="button"
                               onClick={() => setSelectedFriendUids([])}
-                              className="text-slate-500 hover:text-slate-700 font-medium cursor-pointer"
+                              className="text-slate-500 hover:text-slate-700 font-semibold cursor-pointer min-h-[32px] px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
                             >
                               Clear
                             </button>
@@ -670,7 +670,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                             onClick={() =>
                               setSelectedFriendUids(croodFriends.map((f) => f.userId))
                             }
-                            className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer"
+                            className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer min-h-[32px] px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
                           >
                             Select All
                           </button>
@@ -678,9 +678,9 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                       </div>
                     </>
                   ) : (
-                    <div className="py-3 px-2 text-center text-xs text-slate-500 space-y-1">
-                      <p className="font-semibold text-slate-700">No Crood friends yet</p>
-                      <p className="text-[11px] text-slate-400">
+                    <div className="py-4 px-2 text-center text-xs text-slate-500 space-y-1.5">
+                      <p className="font-bold text-slate-700 text-sm">No Crood friends yet</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">
                         Tasks automatically include you. Connect with friends in the Croods tab to collaborate together!
                       </p>
                     </div>
@@ -694,11 +694,11 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
 
       {/* Task Filters & Counts */}
       <div className="flex items-center justify-between gap-2 pt-1">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setTaskFilter('all')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer touch-manipulation active:scale-95 min-w-[70px] flex items-center justify-center ${
               taskFilter === 'all'
                 ? 'bg-slate-900 text-white shadow-2xs'
                 : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
@@ -709,7 +709,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           <button
             type="button"
             onClick={() => setTaskFilter('pending')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer touch-manipulation active:scale-95 min-w-[85px] flex items-center justify-center ${
               taskFilter === 'pending'
                 ? 'bg-indigo-600 text-white shadow-2xs'
                 : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
@@ -720,7 +720,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           <button
             type="button"
             onClick={() => setTaskFilter('completed')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer touch-manipulation active:scale-95 min-w-[75px] flex items-center justify-center ${
               taskFilter === 'completed'
                 ? 'bg-emerald-600 text-white shadow-2xs'
                 : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
@@ -732,7 +732,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
       </div>
 
       {/* Tasks List */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <AnimatePresence mode="popLayout">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => {
@@ -765,32 +765,32 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.2 }}
-                  className={`p-3.5 sm:p-4 rounded-3xl border transition-all ${
+                  className={`p-4 sm:p-4.5 rounded-3xl border transition-all ${
                     task.completed
-                      ? 'bg-slate-50/80 border-slate-200/60 opacity-80'
+                      ? 'bg-slate-50/85 border-slate-200/70 opacity-80'
                       : 'bg-white border-slate-200/90 hover:border-indigo-200 shadow-2xs'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    {/* Completion Checkbox */}
+                  <div className="flex items-start gap-3.5">
+                    {/* Completion Checkbox with generous touch target */}
                     <button
                       type="button"
                       onClick={() => handleToggleTask(task.id)}
-                      className={`w-6 h-6 rounded-xl flex items-center justify-center border transition-all cursor-pointer shrink-0 mt-0.5 ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 min-w-[28px] min-h-[28px] rounded-xl flex items-center justify-center border-2 transition-all cursor-pointer shrink-0 mt-0.5 touch-manipulation active:scale-90 ${
                         task.completed
                           ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
                           : 'border-slate-300 bg-white hover:border-indigo-500 hover:bg-indigo-50/50'
                       }`}
                       title={task.completed ? 'Mark as pending' : 'Mark as completed'}
                     >
-                      {task.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      {task.completed && <Check className="w-4 h-4 stroke-[3]" />}
                     </button>
 
                     {/* Task Content */}
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-start justify-between gap-2.5">
                         <span
-                          className={`text-xs sm:text-sm font-bold block break-words ${
+                          className={`text-sm sm:text-base font-bold block break-words leading-snug ${
                             task.completed
                               ? 'line-through text-slate-400'
                               : 'text-slate-800'
@@ -801,7 +801,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
 
                         {/* Priority Badge */}
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 border ${
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide shrink-0 border ${
                             task.priority === 'high'
                               ? 'bg-rose-50 text-rose-700 border-rose-200'
                               : task.priority === 'medium'
@@ -814,47 +814,47 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                       </div>
 
                       {/* Meta Information Footer (Collab With, Modifier, Cheers) */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-500">
                         <div className="flex flex-wrap items-center gap-2">
                           {/* Collab with Badge */}
                           {taskCollabs.length > 0 ? (
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] border ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs border ${
                                 isCollabWithCurrentUser
                                   ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                   : 'bg-slate-100 text-slate-700 border-slate-200'
                               }`}
                             >
-                              <Users className="w-2.5 h-2.5" />
+                              <Users className="w-3.5 h-3.5 text-indigo-600" />
                               <span>Collab with: {collabDisplayNames}</span>
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-xs text-slate-400">
                               Open Collab
                             </span>
                           )}
 
                           {/* Created/Modified meta */}
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-xs text-slate-400">
                             • {formatTimeAgo(task.lastModifiedAt || task.createdAt)}
                           </span>
 
                           {task.createdBy?.displayName && (
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-xs text-slate-400">
                               by {task.createdBy.displayName}
                             </span>
                           )}
                         </div>
 
                         {/* Actions (Cheer, Delete) */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           {/* Cheer / High-five */}
                           <button
                             type="button"
                             onClick={() => handleCheerTask(task.id)}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
+                            className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-bold transition-all cursor-pointer touch-manipulation active:scale-95 ${
                               hasUserCheered
-                                ? 'bg-amber-50 border-amber-300 text-amber-700'
+                                ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-2xs'
                                 : 'bg-slate-50 hover:bg-amber-50 border-slate-200 text-slate-600'
                             }`}
                             title="Cheer your Crood for progress!"
@@ -867,10 +867,10 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleDeleteTask(task.id)}
-                            className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer touch-manipulation active:scale-90"
                             title="Delete task"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -880,12 +880,12 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
               );
             })
           ) : (
-            <div className="text-center py-10 px-4 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-2.5">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                <Target className="w-6 h-6" />
+            <div className="text-center py-12 sm:py-16 px-6 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-3">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                <Target className="w-7 h-7" />
               </div>
-              <h3 className="text-sm font-bold text-slate-800">No tasks planned yet</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              <h3 className="text-base font-bold text-slate-800">No tasks planned yet</h3>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
                 Add focus goals above and choose Collab members to co-plan live.
               </p>
             </div>
