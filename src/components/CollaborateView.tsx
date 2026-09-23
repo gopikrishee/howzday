@@ -507,10 +507,11 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
             type="submit"
             id="submit-task-btn"
             disabled={!taskTitle.trim() || isSubmittingTask}
-            className="px-4.5 sm:px-5 py-2.5 min-h-[46px] rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0 touch-manipulation"
+            aria-label="Add task"
+            title="Add task"
+            className="w-11 h-11 sm:w-12 sm:h-12 min-w-[44px] min-h-[44px] rounded-full bg-blue-600 hover:bg-blue-700 active:scale-90 text-white shadow-md shadow-blue-500/25 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:active:scale-100 flex items-center justify-center shrink-0 touch-manipulation"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add</span>
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
           </button>
         </div>
 
