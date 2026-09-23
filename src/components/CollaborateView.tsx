@@ -50,6 +50,9 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   // New task form state
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState<TaskPriority>('medium');
+  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
+  const priorityDropdownRef = useRef<HTMLDivElement>(null);
+
   // Selected Crood friends to collaborate with. Creator (Myself) is default and always included.
   const [selectedFriendUids, setSelectedFriendUids] = useState<string[]>([]);
   const [isCollabDropdownOpen, setIsCollabDropdownOpen] = useState(false);
@@ -60,23 +63,30 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   // Filter tasks tab
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
-  // Click-outside listener for Collab multi-select dropdown
+  // Click-outside listener for Priority & Collab dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        priorityDropdownRef.current &&
+        !priorityDropdownRef.current.contains(target)
+      ) {
+        setIsPriorityDropdownOpen(false);
+      }
       if (
         collabDropdownRef.current &&
-        !collabDropdownRef.current.contains(event.target as Node)
+        !collabDropdownRef.current.contains(target)
       ) {
         setIsCollabDropdownOpen(false);
       }
     };
-    if (isCollabDropdownOpen) {
+    if (isPriorityDropdownOpen || isCollabDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isCollabDropdownOpen]);
+  }, [isPriorityDropdownOpen, isCollabDropdownOpen]);
 
   // Current selected planner or fallback to first available
   const currentPlanner = useMemo(() => {
@@ -290,6 +300,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
       setSelectedFriendUids([]);
       setCollabSearchQuery('');
       setIsCollabDropdownOpen(false);
+      setIsPriorityDropdownOpen(false);
     } finally {
       setIsSubmittingTask(false);
     }
@@ -512,52 +523,105 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           </button>
         </div>
 
-        {/* Priority & Collab Controls with stable, spacious responsive layout */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-          {/* Priority pills */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-slate-500 mr-1 shrink-0">Priority:</span>
-            {(['low', 'medium', 'high'] as TaskPriority[]).map((p) => {
-              const isActive = taskPriority === p;
-              const colorClasses =
-                p === 'high'
-                  ? isActive
-                    ? 'bg-rose-500 text-white border-rose-500 shadow-2xs'
-                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/70'
-                  : p === 'medium'
-                  ? isActive
-                    ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/70'
-                  : isActive
-                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-2xs'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/70';
+        {/* Priority & Collab in one row: First Priority, then Collab next to it */}
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap pt-1">
+          {/* 1. First in row: Priority selector */}
+          <div className="flex items-center gap-1.5 shrink-0" ref={priorityDropdownRef}>
+            <span className="text-xs font-bold text-slate-500 shrink-0">Priority:</span>
+            <div className="relative">
+              <button
+                type="button"
+                id="priority-select-trigger"
+                onClick={() => {
+                  setIsPriorityDropdownOpen((prev) => !prev);
+                  setIsCollabDropdownOpen(false);
+                }}
+                className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer touch-manipulation active:scale-95 ${
+                  taskPriority === 'high'
+                    ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/80 shadow-2xs'
+                    : taskPriority === 'medium'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/80 shadow-2xs'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80 shadow-2xs'
+                }`}
+                title="Select task priority"
+              >
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${
+                    taskPriority === 'high'
+                      ? 'bg-rose-500'
+                      : taskPriority === 'medium'
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                  }`}
+                />
+                <span className="capitalize">{taskPriority}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${
+                    isPriorityDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
 
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setTaskPriority(p)}
-                  className={`min-h-[36px] px-3.5 py-1.5 rounded-xl border text-xs font-bold capitalize transition-all cursor-pointer touch-manipulation active:scale-95 ${colorClasses}`}
-                >
-                  {p}
-                </button>
-              );
-            })}
+              {/* Priority Dropdown Popover */}
+              {isPriorityDropdownOpen && (
+                <div className="absolute left-0 top-full mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 z-50 space-y-1">
+                  {(['low', 'medium', 'high'] as TaskPriority[]).map((p) => {
+                    const isSelected = taskPriority === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => {
+                          setTaskPriority(p);
+                          setIsPriorityDropdownOpen(false);
+                        }}
+                        className={`w-full min-h-[36px] flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold capitalize transition-colors cursor-pointer touch-manipulation ${
+                          isSelected
+                            ? p === 'high'
+                              ? 'bg-rose-50 text-rose-800 font-bold'
+                              : p === 'medium'
+                              ? 'bg-amber-50 text-amber-800 font-bold'
+                              : 'bg-emerald-50 text-emerald-800 font-bold'
+                            : 'hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              p === 'high'
+                                ? 'bg-rose-500'
+                                : p === 'medium'
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500'
+                            }`}
+                          />
+                          <span>{p}</span>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Searchable Multi-Select Collab (Croods only, Myself is default) */}
-          <div className="flex items-center justify-between sm:justify-end gap-2">
+          {/* 2. Next to Priority: Collab Multi-Select Dropdown */}
+          <div className="flex items-center gap-1.5 shrink-0" ref={collabDropdownRef}>
             <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 shrink-0">
               <Users className="w-3.5 h-3.5 text-slate-400" />
               <span>Collab:</span>
             </span>
 
-            <div className="relative" ref={collabDropdownRef}>
+            <div className="relative">
               <button
                 type="button"
                 id="collab-select-trigger"
-                onClick={() => setIsCollabDropdownOpen((prev) => !prev)}
-                className="min-h-[38px] w-40 sm:w-44 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-between gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer shrink-0 touch-manipulation active:scale-95"
+                onClick={() => {
+                  setIsCollabDropdownOpen((prev) => !prev);
+                  setIsPriorityDropdownOpen(false);
+                }}
+                className="min-h-[38px] w-38 sm:w-44 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-between gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer shrink-0 touch-manipulation active:scale-95"
                 title="Select Croods to collaborate with"
               >
                 <span className="truncate text-left">{collabSummaryText}</span>
@@ -570,7 +634,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
 
               {/* Dropdown Popover positioned safely on all screens */}
               {isCollabDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-40 space-y-2.5">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 space-y-2.5">
                   {croodFriends.length > 0 ? (
                     <>
                       {/* Search Input */}
