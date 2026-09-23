@@ -50,9 +50,8 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
   // New task form state
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState<TaskPriority>('medium');
-  const [selectedCollabUids, setSelectedCollabUids] = useState<string[]>(() =>
-    user ? [user.uid] : ['guest']
-  );
+  // Selected Crood friends to collaborate with. Creator (Myself) is default and always included.
+  const [selectedFriendUids, setSelectedFriendUids] = useState<string[]>([]);
   const [isCollabDropdownOpen, setIsCollabDropdownOpen] = useState(false);
   const [collabSearchQuery, setCollabSearchQuery] = useState('');
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
@@ -60,13 +59,6 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
 
   // Filter tasks tab
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
-
-  // Sync selectedCollabUids default when user changes
-  useEffect(() => {
-    if (user?.uid) {
-      setSelectedCollabUids((prev) => (prev.length === 0 ? [user.uid] : prev));
-    }
-  }, [user]);
 
   // Click-outside listener for Collab multi-select dropdown
   useEffect(() => {
@@ -102,60 +94,34 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
     }
   }, [planners, activePlannerId]);
 
-  // Collab selectable options (Myself + Crood friends)
-  const availableCollabs = useMemo(() => {
-    const currentUid = user?.uid || 'guest';
-    const currentName = user?.displayName || user?.email?.split('@')[0] || 'Myself';
-    const currentPhoto = user?.photoURL || undefined;
-
-    const meOption = {
-      uid: currentUid,
-      displayName: currentName,
-      email: user?.email || '',
-      photoURL: currentPhoto,
-      isMe: true,
-    };
-
-    const friendOptions = croodFriends.map((f) => ({
-      uid: f.userId,
-      displayName: f.displayName || 'Crood Friend',
-      email: f.email,
-      photoURL: f.photoURL,
-      isMe: false,
-    }));
-
-    return [meOption, ...friendOptions];
-  }, [user, croodFriends]);
-
-  // Filtered collab options for search
-  const filteredCollabOptions = useMemo(() => {
+  // Filtered Crood friends for search in the Collab dropdown (no Myself option needed)
+  const filteredFriends = useMemo(() => {
     const query = collabSearchQuery.trim().toLowerCase();
-    if (!query) return availableCollabs;
-    return availableCollabs.filter(
-      (opt) =>
-        opt.displayName.toLowerCase().includes(query) ||
-        (opt.email && opt.email.toLowerCase().includes(query))
+    if (!query) return croodFriends;
+    return croodFriends.filter(
+      (friend) =>
+        (friend.displayName && friend.displayName.toLowerCase().includes(query)) ||
+        (friend.email && friend.email.toLowerCase().includes(query))
     );
-  }, [availableCollabs, collabSearchQuery]);
+  }, [croodFriends, collabSearchQuery]);
 
-  // Toggle selection of a collab member
-  const toggleCollabSelection = (uid: string) => {
-    setSelectedCollabUids((prev) =>
+  // Toggle selection of a friend
+  const toggleFriendSelection = (uid: string) => {
+    setSelectedFriendUids((prev) =>
       prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]
     );
   };
 
-  // Button summary text
+  // Fixed trigger button summary text (stable length to prevent layout jumps)
   const collabSummaryText = useMemo(() => {
-    if (selectedCollabUids.length === 0) return 'Select Collab';
-    const names = selectedCollabUids.map((uid) => {
-      const opt = availableCollabs.find((o) => o.uid === uid);
-      if (!opt) return 'Crood';
-      return opt.isMe ? 'Myself' : opt.displayName.split(' ')[0];
-    });
-    if (names.length <= 2) return names.join(', ');
-    return `${names[0]}, ${names[1]} +${names.length - 2}`;
-  }, [selectedCollabUids, availableCollabs]);
+    if (selectedFriendUids.length === 0) return 'Just Me';
+    if (selectedFriendUids.length === 1) {
+      const friend = croodFriends.find((f) => f.userId === selectedFriendUids[0]);
+      const name = friend?.displayName ? friend.displayName.split(' ')[0] : '1 Crood';
+      return `${name} & You`;
+    }
+    return `${selectedFriendUids.length} Croods & You`;
+  }, [selectedFriendUids, croodFriends]);
 
   // Helper to sync collaborators and attached Croods onto the planner
   const syncPlannerCollaborators = (
@@ -265,35 +231,35 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
         };
       }
 
-      const currentUserModifier = {
+      // Creator is always default and included in task
+      const currentUserModifier: TaskModifier = {
         uid: user?.uid || 'guest',
         displayName: user?.displayName || user?.email?.split('@')[0] || 'Me',
         photoURL: user?.photoURL || undefined,
       };
 
-      // Construct collabWith from selectedCollabUids
-      const collabWithModifiers: TaskModifier[] = selectedCollabUids.map((uid) => {
-        if (uid === (user?.uid || 'guest')) {
-          return currentUserModifier;
-        }
-        const friend = croodFriends.find((f) => f.userId === uid);
-        return {
-          uid,
-          displayName: friend?.displayName || 'Crood Friend',
-          photoURL: friend?.photoURL,
-        };
-      });
+      // Map selected friends
+      const selectedFriendModifiers: TaskModifier[] = selectedFriendUids
+        .map((uid) => {
+          const friend = croodFriends.find((f) => f.userId === uid);
+          if (!friend) return null;
+          return {
+            uid: friend.userId,
+            displayName: friend.displayName || 'Crood Friend',
+            photoURL: friend.photoURL,
+          };
+        })
+        .filter(Boolean) as TaskModifier[];
 
-      // Default to currentUserModifier if nothing selected
-      const finalCollabWith =
-        collabWithModifiers.length > 0 ? collabWithModifiers : [currentUserModifier];
+      // Collaborators always includes creator (Myself) + any chosen Croods
+      const finalCollabWith: TaskModifier[] = [currentUserModifier, ...selectedFriendModifiers];
 
       const newTask: DailyTaskItem = {
         id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         title: trimmed,
         completed: false,
         priority: taskPriority,
-        assignedTo: finalCollabWith[0], // for backward compatibility
+        assignedTo: currentUserModifier, // for backward compatibility
         collabWith: finalCollabWith,
         createdBy: currentUserModifier,
         lastModifiedBy: currentUserModifier,
@@ -321,6 +287,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
       await onSavePlanner(updatedPlan);
       setActivePlannerId(updatedPlan.id);
       setTaskTitle('');
+      setSelectedFriendUids([]);
       setCollabSearchQuery('');
       setIsCollabDropdownOpen(false);
     } finally {
@@ -545,10 +512,10 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
           </button>
         </div>
 
-        {/* Priority & Collab Multi-select */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+        {/* Priority & Collab Controls with stable layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-1">
           {/* Priority pills */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-bold text-slate-500 mr-1">Priority:</span>
             {(['low', 'medium', 'high'] as TaskPriority[]).map((p) => {
               const isActive = taskPriority === p;
@@ -559,7 +526,7 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
                     : 'bg-rose-50 text-rose-700 border-rose-200'
                   : p === 'medium'
                   ? isActive
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    ? 'bg-amber-500 text-white border-amber-500'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
                   : isActive
                   ? 'bg-emerald-500 text-white border-emerald-500'
@@ -578,134 +545,149 @@ export const CollaborateView: React.FC<CollaborateViewProps> = ({
             })}
           </div>
 
-          {/* Searchable Multi-Select Collab Dropdown */}
-          <div className="relative" ref={collabDropdownRef}>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                <Users className="w-3 h-3 text-slate-400" />
-                <span>Collab:</span>
-              </span>
+          {/* Searchable Multi-Select Collab (Croods only, Myself is default) */}
+          <div className="flex items-center justify-between sm:justify-end gap-1.5">
+            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0">
+              <Users className="w-3 h-3 text-slate-400" />
+              <span>Collab:</span>
+            </span>
 
+            <div className="relative" ref={collabDropdownRef}>
               <button
                 type="button"
                 id="collab-select-trigger"
                 onClick={() => setIsCollabDropdownOpen((prev) => !prev)}
-                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-bold text-xs flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer max-w-[200px]"
-                title="Select collaborators"
+                className="w-36 sm:w-40 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-bold text-xs flex items-center justify-between gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer shrink-0"
+                title="Select Croods to collaborate with"
               >
-                <span className="truncate">{collabSummaryText}</span>
+                <span className="truncate text-left">{collabSummaryText}</span>
                 <ChevronDown
                   className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${
                     isCollabDropdownOpen ? 'rotate-180' : ''
                   }`}
                 />
               </button>
-            </div>
 
-            {/* Dropdown Popover */}
-            {isCollabDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-30 space-y-2">
-                {/* Search Input */}
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={collabSearchQuery}
-                    onChange={(e) => setCollabSearchQuery(e.target.value)}
-                    placeholder="Search croods..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                    autoFocus
-                  />
-                  {collabSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setCollabSearchQuery('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
+              {/* Dropdown Popover positioned safely on all screens */}
+              {isCollabDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-72 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-40 space-y-2">
+                  {croodFriends.length > 0 ? (
+                    <>
+                      {/* Search Input */}
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={collabSearchQuery}
+                          onChange={(e) => setCollabSearchQuery(e.target.value)}
+                          placeholder="Search croods..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          autoFocus
+                        />
+                        {collabSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setCollabSearchQuery('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
 
-                {/* Options List */}
-                <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
-                  {filteredCollabOptions.length > 0 ? (
-                    filteredCollabOptions.map((opt) => {
-                      const isSelected = selectedCollabUids.includes(opt.uid);
-                      return (
-                        <button
-                          key={opt.uid}
-                          type="button"
-                          onClick={() => toggleCollabSelection(opt.uid)}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-50 text-indigo-900 font-bold'
-                              : 'hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all shrink-0 ${
-                                isSelected
-                                  ? 'bg-indigo-600 border-indigo-600 text-white'
-                                  : 'border-slate-300 bg-white'
-                              }`}
-                            >
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
+                      {/* Options List */}
+                      <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                        {filteredFriends.length > 0 ? (
+                          filteredFriends.map((friend) => {
+                            const isSelected = selectedFriendUids.includes(friend.userId);
+                            return (
+                              <button
+                                key={friend.userId}
+                                type="button"
+                                onClick={() => toggleFriendSelection(friend.userId)}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-indigo-50 text-indigo-900 font-bold'
+                                    : 'hover:bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div
+                                    className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all shrink-0 ${
+                                      isSelected
+                                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                                        : 'border-slate-300 bg-white'
+                                    }`}
+                                  >
+                                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                  </div>
 
-                            {opt.photoURL ? (
-                              <img
-                                src={opt.photoURL}
-                                alt={opt.displayName}
-                                className="w-5 h-5 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                                {opt.displayName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                                  {friend.photoURL ? (
+                                    <img
+                                      src={friend.photoURL}
+                                      alt={friend.displayName}
+                                      className="w-5 h-5 rounded-full object-cover shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                      {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'C'}
+                                    </div>
+                                  )}
 
-                            <span className="truncate">
-                              {opt.displayName} {opt.isMe && '(You)'}
-                            </span>
+                                  <span className="truncate">
+                                    {friend.displayName || 'Crood Friend'}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="py-3 text-center text-xs text-slate-400">
+                            No matching croods found
                           </div>
-                        </button>
-                      );
-                    })
+                        )}
+                      </div>
+
+                      {/* Footer Controls */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                        <span>
+                          {selectedFriendUids.length === 0
+                            ? 'Only You'
+                            : `${selectedFriendUids.length} selected (+You)`}
+                        </span>
+                        <div className="flex items-center gap-2.5">
+                          {selectedFriendUids.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedFriendUids([])}
+                              className="text-slate-500 hover:text-slate-700 font-medium cursor-pointer"
+                            >
+                              Clear
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedFriendUids(croodFriends.map((f) => f.userId))
+                            }
+                            className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer"
+                          >
+                            Select All
+                          </button>
+                        </div>
+                      </div>
+                    </>
                   ) : (
-                    <div className="py-3 text-center text-xs text-slate-400">
-                      No matching croods found
+                    <div className="py-3 px-2 text-center text-xs text-slate-500 space-y-1">
+                      <p className="font-semibold text-slate-700">No Crood friends yet</p>
+                      <p className="text-[11px] text-slate-400">
+                        Tasks automatically include you. Connect with friends in the Croods tab to collaborate together!
+                      </p>
                     </div>
                   )}
                 </div>
-
-                {/* Footer Controls */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>{selectedCollabUids.length} selected</span>
-                  <div className="flex items-center gap-2.5">
-                    {selectedCollabUids.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCollabUids([])}
-                        className="text-slate-500 hover:text-slate-700 font-medium cursor-pointer"
-                      >
-                        Clear
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedCollabUids(availableCollabs.map((o) => o.uid))
-                      }
-                      className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer"
-                    >
-                      Select All
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </form>
